@@ -1,0 +1,6038 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#F2F0E9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>GivenMakes</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #F2F0E9;
+  --surface: #FAFAF7;
+  --border: #D1CDC0;
+  --text: #4A4A4A;
+  --muted: #8C7E6C;
+  --gold: #8C7E6C;
+  --gold-dim: #A09080;
+  --dark: #2A2A2A;
+  --accent: #8C7E6C;
+  --nav: 48px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%; /* Not vh - use percentage */
+  width: 100%;
+  background: #E0DDD4; /* Warm linen letterbox */
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile viewport container for desktop preview */
+#app-container {
+  width: 100%;
+  height: 100dvh; /* Dynamic viewport height - accounts for mobile browser chrome */
+  max-width: 430px; /* iPhone 14 Pro width */
+  max-height: 932px; /* iPhone 14 Pro height */
+  background: var(--bg);
+  position: relative;
+  margin: 0 auto;
+  box-shadow: 0 0 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden; /* No scroll on container */
+}
+
+/* Maintain 9:16 aspect ratio on desktop */
+@media (min-width: 768px) {
+  #app-container {
+    aspect-ratio: 9 / 16;
+    height: auto;
+    max-height: 95vh;
+  }
+}
+
+/* All screens are now relative to app-container */
+.screen {
+  position: absolute;
+  inset: 0;
+  bottom: var(--nav);
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════════════════════ */
+#nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav);
+  background: rgba(242, 240, 233, 0.97);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 10001; /* Above worlds (10000) — always visible */
+  backdrop-filter: blur(16px);
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom); /* iPhone safe area */
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  font-weight: 400;
+  padding: 4px 0;
+}
+
+.nav-btn.active {
+  color: var(--dark);
+  font-weight: 500;
+}
+
+.nav-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GALLERY FEED - CSS SCROLL SNAP (NATIVE FEEL)
+   ═══════════════════════════════════════════════════════════════════ */
+#gallery-screen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow-x: scroll;
+  overflow-y: hidden; /* No vertical scroll */
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+#gallery-screen::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.gallery-track {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%; /* Not max-content - exact width */
+}
+
+.gallery-card {
+  flex: 0 0 100%; /* Exact 100% width, no grow/shrink */
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  position: relative;
+  cursor: pointer;
+  overflow: hidden; /* No internal scroll */
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GALLERY CARD — OVERLAY LAYOUT
+   Canvas fills 100% of card. Text floats absolute at bottom.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.gallery-card {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  background: var(--bg);
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  /* Single flat layout — no flex column split */
+  display: block;
+}
+
+/* Stage fills the whole card */
+.gallery-card-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Raise model ~20% toward top edge */
+  padding-bottom: 69%;
+  padding-top: 0;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Bottom fade so text sits cleanly on white */
+.gallery-card-stage::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 42%;
+  background: linear-gradient(to bottom,
+    rgba(242,240,233,0) 0%,
+    rgba(242,240,233,0.88) 55%,
+    rgba(242,240,233,1) 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.gallery-card-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 38%,
+    rgba(242,240,233,0) 20%,
+    rgba(232,229,218,0.3) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Object — sized for the white canvas */
+.gallery-obj-wrap {
+  width: min(92vw, 460px);
+  height: min(92vw, 460px);
+  pointer-events: none;
+  z-index: 2;
+  animation: float 5s ease-in-out infinite alternate;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: none;
+  outline: none;
+}
+
+.gallery-obj-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  overflow: hidden;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.skeleton-loader {
+  width: min(92vw, 460px);
+  height: min(92vw, 460px);
+  background: linear-gradient(
+    90deg,
+    rgba(232,229,223,0.3) 25%,
+    rgba(232,229,223,0.5) 50%,
+    rgba(232,229,223,0.3) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
+  border-radius: 8px;
+  z-index: 2;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.gallery-floor-shadow {
+  width: 34%;
+  height: 10px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.23) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(4px);
+  margin-top: 1px;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+/* Processing Badge */
+.processing-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(184, 149, 106, 0.95);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 500;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.processing-badge-icon {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+/* Image Preview */
+.gallery-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+/* ── Text overlay — more negative space above, RTL ── */
+.gallery-card-info {
+  position: absolute;
+  bottom: calc(var(--nav) + 16%);
+  left: 0;
+  right: 0;
+  z-index: 4;
+  padding: 0 26px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  direction: rtl;
+  text-align: right;
+}
+
+/* Category eyebrow */
+.gallery-cat {
+  font-size: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 400;
+  margin-bottom: 3px;
+}
+
+/* Title — ~1.75rem anchor size */
+.gallery-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dark);
+}
+
+@media (min-width: 768px) {
+  .gallery-title { font-size: 2.125rem; }
+}
+
+/* Creator + year — 80% of title size, normal weight */
+.gallery-creator-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  direction: rtl;
+}
+
+.gallery-creator-link {
+  font-size: 1.05rem;   /* ~80% of 1.75rem */
+  color: var(--dark);
+  font-weight: 400;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(140,126,108,0.3);
+  padding-bottom: 1px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.gallery-creator-link:active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.gallery-creator-sep {
+  font-size: 10px;
+  color: var(--border);
+}
+
+.gallery-year {
+  font-size: 1.05rem;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+/* Location — same scale, lighter */
+.gallery-location {
+  font-size: 0.95rem;
+  color: var(--muted);
+  font-weight: 300;
+  letter-spacing: 0.1px;
+}
+
+/* Pagination Dots */
+.gallery-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  z-index: 10;
+  padding: 8px 14px;
+  background: rgba(242, 240, 233, 0.92);
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.gallery-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s;
+}
+
+.gallery-dot.active {
+  background: var(--dark);
+  width: 16px;
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DETAIL PAGE - ULTRA HD ZOOM
+   ═══════════════════════════════════════════════════════════════════ */
+#detail-page {
+  position: absolute;
+  inset: 0;
+  bottom: var(--nav);
+  height: calc(100% - var(--nav));
+  background: var(--bg);
+  transform: translateY(100%);
+  transition: transform 0.45s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#detail-page.open {
+  transform: translateY(0);
+}
+
+/* Top Bar — transparent over dark */
+.detail-header {
+  display: none; /* Seamless mode uses detail-back-float instead */
+}
+
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 400;
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  transition: color 0.2s;
+}
+
+.detail-back:active {
+  color: var(--dark);
+}
+
+.detail-save-icon,
+.detail-report-btn {
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+
+.detail-save-icon.saved {
+  color: var(--gold);
+}
+
+.detail-report-btn:hover {
+  color: rgba(255,100,50,0.8);
+}
+
+.detail-report-btn:active {
+  transform: scale(0.9);
+}
+
+/* Ultra-HD Stage — full height, light museum */
+.detail-stage {
+  flex: 1;
+  min-height: 0;
+  background: radial-gradient(ellipse at 50% 40%, #F2F0E9 0%, #E5E2D8 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Soft top highlight — museum overhead light */
+.detail-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 15%, rgba(255,252,244,0.6) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Very subtle edge vignette */
+.detail-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(180,170,155,0.15) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Info panel — hidden in favor of overlay design */
+.detail-info {
+  display: none;
+}
+
+/* Particles canvas */
+#particles-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Object container - supports zoom & pan */
+.detail-obj-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  cursor: grab;
+}
+
+.detail-obj-container.zoomed {
+  cursor: move;
+}
+
+.detail-obj-container:active {
+  cursor: grabbing;
+}
+
+.detail-obj-wrap {
+  width: 300px;
+  height: 300px;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: center center;
+  background: transparent;
+}
+
+.detail-obj-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  background: transparent !important;
+}
+
+/* Zoom controls — dark theme */
+.zoom-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 4;
+}
+
+.zoom-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(242,240,233,0.85);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  font-weight: 300;
+}
+
+.zoom-btn:active {
+  transform: scale(0.9);
+  background: rgba(209,205,192,0.9);
+}
+
+.zoom-indicator {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  padding: 8px 14px;
+  background: rgba(242,240,233,0.85);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--muted);
+  backdrop-filter: blur(8px);
+  z-index: 4;
+  letter-spacing: 0.5px;
+}
+
+/* Museum Info Panel - Scrollable */
+.detail-info {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 18px 20px 20px;
+  overflow-y: auto; /* Only this section scrolls */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.detail-info-cat {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 500;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.detail-info-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.375rem; /* 22px base */
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--dark);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 768px) {
+  .detail-info-title {
+    font-size: 1.75rem; /* 28px on desktop */
+  }
+}
+
+.detail-info-section {
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.detail-info-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.detail-info-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
+.detail-info-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  font-weight: 300;
+  font-style: italic;
+  padding-right: 10px;
+  border-right: 2px solid var(--gold-dim);
+  flex-shrink: 0;
+}
+
+.detail-specs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.spec-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.spec-chip b {
+  color: var(--dark);
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SAVED SCREEN
+   ═══════════════════════════════════════════════════════════════════ */
+#saved-screen {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen-header {
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.screen-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.25rem; /* 20px */
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--dark);
+}
+
+.screen-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.saved-empty {
+  padding: 80px 30px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.saved-empty-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.saved-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+.saved-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.saved-card:active {
+  transform: scale(0.97);
+}
+
+.saved-card-stage {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  position: relative;
+  font-size: 50px;
+}
+
+.saved-card-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 25%, rgba(255, 252, 245, 0.9) 0%, transparent 70%);
+}
+
+.saved-card-info {
+  padding: 10px 12px 12px;
+  position: relative;
+}
+
+.saved-card-rm {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.saved-card-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--dark);
+  margin-bottom: 3px;
+}
+
+.saved-card-cat {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UPLOAD SCREEN - CURATORIAL INPUT
+   ═══════════════════════════════════════════════════════════════════ */
+#upload-screen {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.upload-body {
+  padding: 18px 20px 50px;
+}
+
+.upload-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: 14px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  background: var(--surface);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.upload-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.uz-icon {
+  font-size: 32px;
+}
+
+.uz-text {
+  font-size: 13px;
+  color: var(--dark);
+  font-weight: 500;
+}
+
+.uz-sub {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.upload-preview {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: block;
+  font-weight: 500;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--dark);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  outline: none;
+  direction: rtl;
+  transition: border-color 0.2s;
+  resize: none;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--accent);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--muted);
+}
+
+.form-textarea {
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+.form-hint {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 15px;
+  background: var(--dark);
+  color: var(--bg);
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  margin-top: 12px;
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s;
+}
+
+.submit-btn:active {
+  opacity: 0.8;
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* File Preview Grid */
+.file-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+  display: none;
+}
+
+.file-preview-grid.show {
+  display: grid;
+}
+
+.file-preview-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.file-preview-img,
+.file-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-preview-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.file-preview-remove:active {
+  transform: scale(0.9);
+}
+
+/* Processing Overlay */
+.processing-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(248, 247, 244, 0.98);
+  backdrop-filter: blur(20px);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.processing-overlay.show {
+  display: flex;
+}
+
+.processing-content {
+  text-align: center;
+  padding: 40px 30px;
+  max-width: 320px;
+}
+
+.processing-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.processing-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.processing-stage {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 20px;
+  min-height: 18px;
+  font-style: italic;
+}
+
+.processing-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.processing-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--gold-dim));
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.processing-percent {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+/* Curator Preview */
+.curator-preview {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.curator-preview.show {
+  display: block;
+}
+
+.curator-header {
+  margin-bottom: 16px;
+}
+
+.curator-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 500;
+  background: rgba(184, 149, 106, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.curator-result {
+  display: none;
+}
+
+.curator-result.show {
+  display: block;
+}
+
+.curator-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.curator-status.approved {
+  background: rgba(76, 175, 80, 0.1);
+  color: #2E7D32;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.curator-status.pending {
+  background: rgba(255, 152, 0, 0.1);
+  color: #E65100;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.curator-status.rejected {
+  background: rgba(244, 67, 54, 0.1);
+  color: #C62828;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.curator-field {
+  margin-bottom: 14px;
+}
+
+.curator-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: block;
+  font-weight: 500;
+}
+
+.curator-input,
+.curator-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--dark);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  outline: none;
+  direction: rtl;
+  transition: border-color 0.2s;
+  resize: none;
+}
+
+.curator-input:focus,
+.curator-textarea:focus {
+  border-color: var(--gold-dim);
+}
+
+.curator-textarea {
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+.curator-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.curator-btn-primary,
+.curator-btn-secondary {
+  flex: 1;
+  padding: 13px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.curator-btn-primary {
+  background: var(--dark);
+  color: var(--bg);
+}
+
+.curator-btn-primary:active {
+  opacity: 0.85;
+}
+
+.curator-btn-secondary {
+  background: var(--surface);
+  color: var(--dark);
+  border: 1px solid var(--border);
+}
+
+.curator-btn-secondary:active {
+  background: var(--border);
+}
+
+.curator-message {
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.curator-message-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.8;
+}
+
+.curator-message-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.curator-message-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.curator-message-examples {
+  text-align: right;
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--bg);
+  border-radius: 10px;
+}
+
+.example-item {
+  font-size: 11px;
+  color: var(--text);
+  padding: 6px 0;
+  line-height: 1.4;
+}
+
+.example-item:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Validation Warning */
+.validation-warning {
+  background: #FFF9F0;
+  border: 1px solid #F5D6A8;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  display: none;
+}
+
+.validation-warning.show {
+  display: block;
+}
+
+.validation-warning-icon {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.validation-warning-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dark);
+  margin-bottom: 4px;
+}
+
+.validation-warning-text {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Success State */
+.upload-success {
+  display: none;
+  padding: 80px 30px;
+  text-align: center;
+}
+
+.upload-success.show {
+  display: block;
+}
+
+.us-icon {
+  font-size: 48px;
+  margin-bottom: 18px;
+}
+
+.us-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.375rem; /* 22px */
+  color: var(--dark);
+  margin-bottom: 8px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.us-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.us-processing-note {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(184, 149, 106, 0.1);
+  border: 1px solid rgba(184, 149, 106, 0.3);
+  border-radius: 12px;
+}
+
+.us-processing-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dark);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.us-processing-text {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  bottom: calc(var(--nav) + 20px);
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--dark);
+  color: var(--bg);
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: calc(100% - 40px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  text-align: center;
+}
+
+.toast-notification.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast-icon {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes float {
+  from {
+    transform: translateY(-6px);
+  }
+  to {
+    transform: translateY(4px);
+  }
+}
+
+.float-anim {
+  animation: float 4s ease-in-out infinite alternate;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FULLSCREEN BUTTON
+   ═══════════════════════════════════════════════════════════════════ */
+.fullscreen-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(242, 240, 233, 0.92);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--dark);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  z-index: 10000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.fullscreen-btn:hover {
+  background: var(--surface);
+  transform: scale(1.05);
+}
+
+.fullscreen-btn:active {
+  transform: scale(0.95);
+}
+
+/* Hide on mobile (< 768px) */
+@media (max-width: 767px) {
+  .fullscreen-btn {
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOADING STATE
+   ═══════════════════════════════════════════════════════════════════ */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.3s;
+}
+
+.loading-overlay.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   THREE WORLDS NAVIGATION SYSTEM
+   World 0 (top):    Stats World   — swipe DOWN to reveal
+   World 1 (center): Gallery       — default
+   World 2 (bottom): Global Map    — swipe UP to reveal
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* World container — stacks the 3 worlds vertically */
+#worlds-container {
+  position: absolute;
+  inset: 0;
+  bottom: var(--nav);
+  overflow: hidden;
+  pointer-events: none; /* Transparent to children */
+  z-index: 100;
+}
+
+/* ── World Screens — shared pointer-events logic ── */
+.world-screen {
+  pointer-events: none; /* Closed: transparent to touch */
+}
+
+.world-screen.active {
+  pointer-events: auto; /* Open: captures all touch/mouse */
+}
+
+/* ── Studio World (Swipe DOWN = appears from top) ── */
+#studio-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(242, 240, 233, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transform: translateY(-100%);
+  transition: transform 0.55s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 10000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#studio-world.active {
+  transform: translateY(0);
+}
+
+/* Stats world inner content */
+.sw-header {
+  padding: 24px 24px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sw-eyebrow {
+  font-size: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.sw-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.sw-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Aura Score Card */
+.sw-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sw-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(140,126,108,0.25), transparent);
+}
+
+.sw-card-label {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.sw-card-value {
+  font-family: 'Inter', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.sw-card-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+/* Aura glow bar */
+.sw-aura-bar {
+  margin-top: 14px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sw-aura-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #B0A090);
+  border-radius: 2px;
+  transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  width: 0%;
+}
+
+/* Decay meter */
+.sw-decay-ring {
+  width: 64px;
+  height: 64px;
+  position: absolute;
+  top: 18px;
+  left: 20px; /* RTL: left = end */
+}
+
+.sw-decay-ring svg {
+  transform: rotate(-90deg);
+}
+
+.sw-decay-ring circle {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.sw-decay-track {
+  stroke: var(--border);
+  stroke-dasharray: 175;
+  stroke-dashoffset: 0;
+}
+
+.sw-decay-progress {
+  stroke: var(--gold);
+  stroke-dasharray: 175;
+  stroke-dashoffset: 175;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.sw-card.decay-card {
+  padding-left: 96px; /* Make room for ring on left (RTL) */
+}
+
+/* Signals grid */
+.sw-signals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sw-signal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.sw-signal-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sw-signal-num {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.sw-signal-name {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Gravity rank bar */
+.sw-gs-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.sw-gs-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sw-gs-label {
+  font-size: 9px;
+  color: var(--muted);
+  width: 60px;
+  text-align: left;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.sw-gs-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sw-gs-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.sw-gs-fill.active {
+  background: linear-gradient(90deg, var(--accent), #B0A090);
+}
+
+.sw-gs-score {
+  font-size: 9px;
+  color: var(--muted);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Global Map World (Swipe UP = appears from bottom) ── */
+#map-world {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(242, 240, 233, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transform: translateY(100%);
+  transition: transform 0.55s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 10000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#map-world.active {
+  transform: translateY(0);
+}
+
+/* Map world header */
+.mw-header {
+  padding: 24px 24px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.mw-header-text {}
+
+.mw-eyebrow {
+  font-size: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.mw-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.mw-active-count {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.mw-active-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #4CAF50;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Map placeholder area */
+.mw-map-area {
+  flex: 0 0 45%;
+  position: relative;
+  overflow: hidden;
+  background: #ECEAE1;
+  border-bottom: 1px solid var(--border);
+}
+
+.mw-map-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(140,126,108,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140,126,108,0.12) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.mw-map-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mw-map-coming {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+/* City pins */
+.mw-city-pin {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.mw-city-pin:active {
+  transform: scale(0.9);
+}
+
+.mw-pin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(140,126,108,0.2);
+  position: relative;
+}
+
+.mw-pin-dot.pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(140,126,108,0.35);
+  animation: city-pulse 2s ease-out infinite;
+}
+
+@keyframes city-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.mw-pin-label {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* City list */
+.mw-city-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mw-city-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.mw-city-row:active {
+  opacity: 0.6;
+}
+
+.mw-city-row:last-child {
+  border-bottom: none;
+}
+
+.mw-city-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mw-city-status {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mw-city-status.active {
+  background: #4CAF50;
+  box-shadow: 0 0 6px rgba(76,175,80,0.5);
+}
+
+.mw-city-status.inactive {
+  background: rgba(255,255,255,0.15);
+}
+
+.mw-city-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--dark);
+  letter-spacing: 0.02em;
+}
+
+.mw-city-sub {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.mw-city-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mw-city-count {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mw-city-arrow {
+  font-size: 14px;
+  color: var(--border);
+}
+
+/* Close pill for both worlds */
+.world-close-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: rgba(209,205,192,0.5);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: 0 auto 4px;
+  flex-shrink: 0;
+  width: fit-content;
+  pointer-events: all;
+}
+
+.world-close-pill:active {
+  background: var(--border);
+}
+/* ── Detail Stats Overlay — swipe up inside detail page ── */
+#detail-stats-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(242, 240, 233, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transform: translateY(100%);
+  transition: transform 0.55s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 500;
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#detail-stats-overlay.open {
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+/* Swipe-up hint at bottom of detail info */
+.detail-stats-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 0 8px;
+  color: rgba(138,135,128,0.45);
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.detail-stats-hint-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  max-width: 40px;
+}
+
+.detail-stats-hint-arrow {
+  font-size: 9px;
+  animation: hint-bounce-up 2s ease-in-out infinite;
+}
+
+@keyframes hint-bounce-up {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+/* ── Curation Placeholder (detail page for isProcessing items) ── */
+.curation-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 4;
+  padding: 24px;
+}
+
+.curation-preview-img {
+  width: min(70%, 260px);
+  height: min(70%, 260px);
+  object-fit: contain;
+  border-radius: 12px;
+  opacity: 0.85;
+  filter: saturate(0.7);
+}
+
+.curation-preview-emoji {
+  font-size: 80px;
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.curation-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(184, 149, 106, 0.1);
+  border: 1px solid rgba(184, 149, 106, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  max-width: 280px;
+}
+
+.curation-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.curation-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  text-align: right;
+}
+/* ── Studio Hold Items ── */
+.studio-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.studio-empty-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  opacity: 0.25;
+}
+
+.studio-section-label {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.studio-hold-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  position: relative;
+}
+
+.studio-hold-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184,149,106,0.3), transparent);
+}
+
+.studio-hold-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  filter: saturate(0.6);
+}
+
+.studio-hold-thumb-emoji {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.studio-hold-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.studio-hold-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dark);
+  letter-spacing: -0.01em;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studio-hold-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(140, 126, 108, 0.08);
+  border: 1px solid rgba(140, 126, 108, 0.2);
+  border-radius: 20px;
+  padding: 3px 8px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--accent);
+}
+
+.studio-hold-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.studio-hold-date {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+/* ═══════════════════════════════════════════════════════════════════
+   MY STUDIO — Personal dashboard (dark, managerial)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Profile header inside studio */
+.studio-profile {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  direction: rtl;
+}
+
+.studio-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.studio-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(140,126,108,0.1);
+  border: 1px solid rgba(140,126,108,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.studio-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.studio-profile-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.studio-profile-handle {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
+.studio-edit-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.studio-edit-btn:active {
+  background: var(--border);
+  color: var(--dark);
+}
+
+.studio-bio {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+/* Gravity score banner */
+.studio-gravity-bar {
+  background: rgba(140,126,108,0.06);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.studio-gravity-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.studio-gravity-score {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: -0.03em;
+}
+
+.studio-gravity-sub {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Studio tabs */
+.studio-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  direction: rtl;
+}
+
+.studio-tab {
+  flex: 1;
+  padding: 12px 8px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.studio-tab.active {
+  color: var(--dark);
+  border-bottom-color: var(--dark);
+}
+
+/* Studio tab panels */
+.studio-panel {
+  display: none;
+  padding: 16px 20px;
+  direction: rtl;
+}
+
+.studio-panel.active {
+  display: block;
+}
+
+/* Activity feed */
+.studio-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.studio-activity-item:last-child {
+  border-bottom: none;
+}
+
+
+
+.studio-activity-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.studio-activity-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.studio-activity-text b {
+  color: var(--dark);
+  font-weight: 500;
+}
+
+.studio-activity-time {
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PUBLIC PROFILE PAGE — curator view (light, gallery-style)
+   ═══════════════════════════════════════════════════════════════════ */
+
+#public-profile-page {
+  position: absolute;
+  inset: 0;
+  bottom: var(--nav);
+  background: #FFFFFF;
+  transform: translateX(-100%);
+  transition: transform 0.45s cubic-bezier(0.77, 0, 0.175, 1);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#public-profile-page.open {
+  transform: translateX(0);
+}
+
+.pp-header {
+  flex-shrink: 0;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(12px);
+  direction: rtl;
+}
+
+.pp-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--dark);
+  font-weight: 500;
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.pp-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Profile hero */
+.pp-hero {
+  padding: 28px 24px 20px;
+  text-align: right;
+  direction: rtl;
+  border-bottom: 1px solid var(--border);
+}
+
+.pp-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 14px;
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.pp-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--dark);
+  margin-bottom: 4px;
+}
+
+.pp-bio {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  font-weight: 300;
+  margin-bottom: 16px;
+}
+
+.pp-influence {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(184,149,106,0.08);
+  border: 1px solid rgba(184,149,106,0.2);
+  border-radius: 20px;
+  padding: 7px 14px;
+}
+
+.pp-influence-score {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: -0.02em;
+}
+
+.pp-influence-label {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(184,149,106,0.7);
+}
+
+/* Showcase grid */
+.pp-section-label {
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 16px 24px 10px;
+  direction: rtl;
+  text-align: right;
+}
+
+.pp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+.pp-grid-item {
+  background: #FFFFFF;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: opacity 0.2s;
+}
+
+.pp-grid-item:active {
+  opacity: 0.75;
+}
+
+.pp-grid-emoji {
+  font-size: 44px;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.pp-grid-title {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--dark);
+  margin-top: 8px;
+  text-align: center;
+  padding: 0 8px;
+  direction: rtl;
+}
+
+.pp-grid-cat {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 2px;
+}
+/* ═══════════════════════════════════════════════════════════════════
+   SEAMLESS GALLERY→DETAIL TRANSITION
+   The card itself transforms — no new page
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Gallery screen enters "detail mode" — covers everything */
+#gallery-screen.detail-mode {
+  z-index: 1500;
+  overflow: hidden;
+}
+
+/* The active card darkens and fills the screen */
+.gallery-card.detail-active {
+  background: #000000;
+  z-index: 1600;
+  cursor: default;
+  overflow: visible;
+  transition: background 0.5s ease;
+  isolation: isolate;  /* Own stacking context — children z-index relative to card */
+}
+
+/* Stage: deep black in detail mode — PADDING/JUSTIFY UNCHANGED */
+.gallery-card.detail-active .gallery-card-stage {
+  background: #000000;
+  transition: background 0.5s ease;
+  overflow: visible;
+  padding-bottom: 0;   /* Remove upward push — beam needs full centered space */
+  justify-content: center;
+}
+
+/* Kill the white bottom fade in detail mode */
+.gallery-card.detail-active .gallery-card-stage::after {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Kill the radial vignette in detail mode */
+.gallery-card.detail-active .gallery-card-stage::before {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Object: restore pointer events for OrbitControls */
+.gallery-card.detail-active .gallery-obj-wrap {
+  pointer-events: all;
+  animation: none;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 1600;
+  /* Beam as background — canvas is transparent so beam shows through */
+  background-color: #000000 !important;
+  background-image: none;  /* set by JS when beam loads */
+  background-size: cover;
+  background-position: center top;
+  overflow: visible;
+  transition: background-image 0s;
+}
+
+.gallery-card.detail-active .gallery-obj-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  display: block;
+  position: relative;
+  z-index: 2;
+}
+
+/* Text block fades out */
+.gallery-card-info {
+  transition: opacity 0.4s ease;
+}
+
+.gallery-card.detail-active .gallery-card-info {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Detail overlay UI — back button + actions — appears on detail-active */
+/* ── Floating back button — fixed position, no background ── */
+/* beam-overlay replaced by wrap background-image approach */
+#beam-overlay { display: none !important; }
+
+.detail-back-float {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: none;
+  border: none;
+  padding: 6px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  pointer-events: all;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.3s, color 0.2s;
+  letter-spacing: 0.3px;
+  display: none;
+}
+
+.gallery-card.detail-active .detail-back-float {
+  opacity: 1;
+  display: block;
+}
+
+.detail-back-float:active {
+  color: rgba(255,255,255,0.95);
+}
+
+.detail-overlay-back { display: none; } /* legacy — replaced by detail-back-float */
+.detail-overlay-actions { display: none; }
+.detail-overlay-btn { display: none; }
+}
+
+.detail-overlay-btn {
+  font-size: 18px;
+  color: rgba(255,255,255,0.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.detail-overlay-btn.saved {
+  color: var(--gold);
+}
+
+/* Item info strip — slides up from bottom in detail mode */
+.detail-info-strip {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1700;
+  padding: 20px 26px calc(var(--nav) + 16px);
+  direction: rtl;
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+  transition: opacity 0.4s ease 0.35s, transform 0.4s ease 0.35s;
+}
+
+.gallery-card.detail-active .detail-info-strip {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.detail-info-title-sm {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.detail-info-meta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+}
+
+</style>
+</head>
+<body>
+
+<div id="app-container">
+
+<!-- Fullscreen Button -->
+<button class="fullscreen-btn" onclick="toggleFullscreen()" title="Fullscreen Mode">⛶</button>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<!-- Beam Overlay — CSS layer shown only in detail mode -->
+<div id="beam-overlay"></div>
+
+<!-- Gallery Screen -->
+<div id="gallery-screen" class="screen active">
+  <div class="gallery-track" id="gallery-track"></div>
+  <div class="gallery-dots" id="gallery-dots"></div>
+</div>
+
+<!-- Saved Screen -->
+<div id="saved-screen" class="screen">
+  <div class="screen-header">
+    <div class="screen-title">נשמר</div>
+    <div class="screen-sub" id="saved-count">0 פריטים</div>
+  </div>
+  <div id="saved-list"></div>
+</div>
+
+<!-- Upload Screen -->
+<div id="upload-screen" class="screen">
+  <div class="screen-header">
+    <div class="screen-title">הוסף פריט</div>
+    <div class="screen-sub">שלח לאוצר לבדיקה</div>
+  </div>
+  <div class="upload-body">
+
+    <div id="upload-form">
+
+      <!-- Single image upload zone -->
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" accept="image/*" id="file-input" onchange="handleFileUpload(this)">
+        <div class="uz-icon" id="uz-icon">📸</div>
+        <div class="uz-text" id="uz-text">תמונה של הפריט</div>
+        <div class="uz-sub" id="uz-sub">JPG · PNG · HEIC</div>
+      </div>
+
+      <!-- Item name -->
+      <div class="form-group">
+        <label class="form-label">שם הפריט</label>
+        <input class="form-input" type="text" id="f-item-name"
+          placeholder="למשל: כיסא עץ, מנורה נחושת...">
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label class="form-label">תיאור</label>
+        <textarea class="form-textarea" id="f-item-desc"
+          placeholder="ספר על הפריט — מה הוא, מאיפה הגיע, מה השתנה..."></textarea>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="handleUploadSubmit()">שלח לאוצר ✦</button>
+
+    </div><!-- #upload-form -->
+
+    <!-- Success state -->
+    <div class="upload-success" id="upload-success">
+      <div class="us-icon">✦</div>
+      <div class="us-title">נשלח לאוצר</div>
+      <div class="us-text">הפריט התקבל ויטופל בהקדם.<br>תוכל לעקוב אחר הסטטוס בסטודיו.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Detail Page -->
+<div id="detail-page">
+  <!-- detail-header removed — seamless mode uses detail-back-float -->
+  
+  <div class="detail-stage" id="detail-stage">
+    <canvas id="particles-canvas"></canvas>
+    
+    <div class="detail-obj-container" id="detail-obj-container">
+      <div class="detail-obj-wrap" id="detail-obj-wrap">
+        <canvas id="detail-canvas"></canvas>
+      </div>
+    </div>
+    
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="zoomIn()">+</button>
+      <button class="zoom-btn" onclick="zoomOut()">−</button>
+      <button class="zoom-btn" onclick="resetZoom()">⟲</button>
+    </div>
+    
+    <div class="zoom-indicator" id="zoom-indicator">100%</div>
+  </div>
+  
+  <div class="detail-info">
+    <div class="detail-info-cat" id="detail-cat"></div>
+    <div class="detail-info-title" id="detail-title"></div>
+    
+    <div class="detail-info-section">
+      <div class="detail-info-label">תיאור</div>
+      <div class="detail-info-text" id="detail-description"></div>
+    </div>
+    
+    <div class="detail-info-section">
+      <div class="detail-info-label">הערת האוצר</div>
+      <div class="detail-info-note" id="detail-note"></div>
+    </div>
+    
+    <div class="detail-specs" id="detail-specs"></div>
+
+    <!-- Swipe-up hint inside detail -->
+    <div class="detail-stats-hint" id="detail-stats-hint">
+      <div class="detail-stats-hint-line"></div>
+      <span>Aura & Gravity</span>
+      <div class="detail-stats-hint-arrow">▲</div>
+    </div>
+  </div>
+
+  <!-- STATS OVERLAY — swipe up inside detail page -->
+  <div id="detail-stats-overlay">
+    <div class="sw-header">
+      <div class="sw-eyebrow">Signal Layer · פריט זה</div>
+      <div class="sw-title" id="dso-title">—</div>
+    </div>
+    <div class="sw-body" id="dso-body">
+
+      <div class="sw-card">
+        <div class="sw-card-label">Aura Score</div>
+        <div class="sw-card-value" id="dso-aura-val">—</div>
+        <div class="sw-card-sub" id="dso-aura-sub">Gravity Score</div>
+        <div class="sw-aura-bar">
+          <div class="sw-aura-fill" id="dso-aura-fill"></div>
+        </div>
+      </div>
+
+      <div class="sw-card decay-card">
+        <div class="sw-decay-ring">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <circle class="sw-decay-track" cx="32" cy="32" r="28"/>
+            <circle class="sw-decay-progress" id="dso-decay-circle" cx="32" cy="32" r="28"/>
+          </svg>
+        </div>
+        <div class="sw-card-label">Decay Rate</div>
+        <div class="sw-card-value" id="dso-decay-val">—</div>
+        <div class="sw-card-sub" id="dso-decay-sub">ימים עד ירידת סטטוס</div>
+      </div>
+
+      <div>
+        <div class="sw-card-label" style="color:rgba(255,255,255,0.25); font-size:8px; letter-spacing:2px; margin-bottom:10px;">ATTENTION SIGNALS</div>
+        <div class="sw-signals">
+          <div class="sw-signal">
+            <div class="sw-signal-icon">👁️</div>
+            <div class="sw-signal-num" id="dso-views">—</div>
+            <div class="sw-signal-name">Views</div>
+          </div>
+          <div class="sw-signal">
+            <div class="sw-signal-icon">💾</div>
+            <div class="sw-signal-num" id="dso-saves">—</div>
+            <div class="sw-signal-name">Saves</div>
+          </div>
+          <div class="sw-signal">
+            <div class="sw-signal-icon">⏳</div>
+            <div class="sw-signal-num" id="dso-long">—</div>
+            <div class="sw-signal-name">Long Views</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sw-card">
+        <div class="sw-card-label">Gravity Score — מסלול הישרדות</div>
+        <div class="sw-gs-levels">
+          <div class="sw-gs-row">
+            <div class="sw-gs-label">Raw Entry</div>
+            <div class="sw-gs-bar"><div class="sw-gs-fill dso-gs-fill" style="width:100%"></div></div>
+            <div class="sw-gs-score">0–10</div>
+          </div>
+          <div class="sw-gs-row">
+            <div class="sw-gs-label">Local Feed</div>
+            <div class="sw-gs-bar"><div class="sw-gs-fill dso-gs-fill" style="width:60%"></div></div>
+            <div class="sw-gs-score">10–30</div>
+          </div>
+          <div class="sw-gs-row">
+            <div class="sw-gs-label">Curated</div>
+            <div class="sw-gs-bar"><div class="sw-gs-fill dso-gs-fill" style="width:40%"></div></div>
+            <div class="sw-gs-score">30–60</div>
+          </div>
+          <div class="sw-gs-row">
+            <div class="sw-gs-label">Highlight</div>
+            <div class="sw-gs-bar"><div class="sw-gs-fill dso-gs-fill" style="width:25%"></div></div>
+            <div class="sw-gs-score">60–90</div>
+          </div>
+          <div class="sw-gs-row">
+            <div class="sw-gs-label">Icon ✦</div>
+            <div class="sw-gs-bar"><div class="sw-gs-fill dso-gs-fill" style="width:10%"></div></div>
+            <div class="sw-gs-score">90+</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- dso-body -->
+  </div><!-- #detail-stats-overlay -->
+</div><!-- #detail-page -->
+
+<!-- Public Profile Page — slides in from left -->
+<div id="public-profile-page">
+  <div class="pp-header">
+    <button class="pp-back" onclick="closePublicProfile()">← חזרה</button>
+    <div style="font-size:11px; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase;">פרופיל</div>
+  </div>
+  <div class="pp-body" id="pp-body">
+    <!-- Populated by openPublicProfile(creatorName) -->
+  </div>
+</div>
+
+<!-- Navigation -->
+<nav id="nav">
+  <button class="nav-btn active" onclick="showScreen('gallery')" id="nav-gallery">
+    <span class="nav-icon">◎</span>
+    גלריה
+  </button>
+  <button class="nav-btn" onclick="showScreen('saved')" id="nav-saved">
+    <span class="nav-icon">♡</span>
+    נשמר
+  </button>
+  <button class="nav-btn" onclick="showScreen('upload')" id="nav-upload">
+    <span class="nav-icon">＋</span>
+    הוסף
+  </button>
+</nav>
+
+<!-- Toast Notification -->
+<div class="toast-notification" id="toast-notification">
+  <div class="toast-icon">✦</div>
+  <div id="toast-message"></div>
+</div>
+
+<!-- THREE WORLDS OVERLAY CONTAINER -->
+<div id="worlds-container">
+
+  <!-- STUDIO WORLD — Swipe Down to reveal (comes from top) -->
+  <div id="studio-world" class="world-screen">
+
+    <!-- Personal header -->
+    <div class="studio-profile">
+      <div class="studio-profile-top">
+        <div class="studio-avatar">✦</div>
+        <div class="studio-profile-info">
+          <div class="studio-profile-name" id="studio-user-name">אבי סימן-טוב</div>
+          <div class="studio-profile-handle">@avisimantov</div>
+        </div>
+        <button class="studio-edit-btn" onclick="editStudioProfile()">עריכה</button>
+      </div>
+      <div class="studio-bio" id="studio-user-bio">אוצר עצמאי ויוצר. מחפש יופי בחפצים שנשכחו.</div>
+      <div class="studio-gravity-bar">
+        <div>
+          <div class="studio-gravity-label">Influence Score</div>
+          <div class="studio-gravity-sub">כוח משיכה מצטבר</div>
+        </div>
+        <div>
+          <div class="studio-gravity-score" id="studio-gravity-total">247</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="studio-tabs">
+      <div class="studio-tab active" onclick="switchStudioTab('items')">פריטים</div>
+      <div class="studio-tab" onclick="switchStudioTab('collections')">אוספים</div>
+      <div class="studio-tab" onclick="switchStudioTab('activity')">פעילות</div>
+    </div>
+
+    <!-- Scrollable body -->
+    <div class="sw-body" id="sw-body" style="padding: 0;">
+
+      <!-- Items panel -->
+      <div class="studio-panel active" id="studio-panel-items">
+        <div id="studio-hold-list"></div>
+        <div class="sw-signals" id="studio-counters" style="padding: 0; margin-top: 14px;">
+          <div class="sw-signal">
+            <div class="sw-signal-icon" style="font-size:16px; opacity:0.5;">⏳</div>
+            <div class="sw-signal-num" id="studio-count-pending" style="color:rgba(255,255,255,0.4);">0</div>
+            <div class="sw-signal-name">בבדיקה</div>
+          </div>
+          <div class="sw-signal">
+            <div class="sw-signal-icon" style="font-size:16px; opacity:0.5;">✦</div>
+            <div class="sw-signal-num" id="studio-count-live" style="color:rgba(255,255,255,0.4);">0</div>
+            <div class="sw-signal-name">בגלריה</div>
+          </div>
+          <div class="sw-signal">
+            <div class="sw-signal-icon" style="font-size:16px; opacity:0.5;">📦</div>
+            <div class="sw-signal-num" id="studio-count-total" style="color:rgba(255,255,255,0.4);">0</div>
+            <div class="sw-signal-name">סה״כ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collections panel -->
+      <div class="studio-panel" id="studio-panel-collections">
+        <div class="studio-empty" style="padding: 40px 0; text-align:center;">
+          <div class="studio-empty-icon">◫</div>
+          אוספים יופיעו כאן<br>לאחר שתאצור פריטים ✦
+        </div>
+      </div>
+
+      <!-- Activity panel -->
+      <div class="studio-panel" id="studio-panel-activity">
+        <div class="studio-activity-item">
+          <div class="studio-activity-icon">🔁</div>
+          <div class="studio-activity-text"><b>שירה לוי</b> עשתה Echo לבבושקה של סבתא</div>
+          <div class="studio-activity-time">לפני 2ש׳</div>
+        </div>
+        <div class="studio-activity-item">
+          <div class="studio-activity-icon">💾</div>
+          <div class="studio-activity-text"><b>עמית רוזן</b> שמר את אור מהביוב</div>
+          <div class="studio-activity-time">אתמול</div>
+        </div>
+        <div class="studio-activity-item">
+          <div class="studio-activity-icon">👁️</div>
+          <div class="studio-activity-text">12 צפיות חדשות בבבושקה של סבתא</div>
+          <div class="studio-activity-time">לפני 3י׳</div>
+        </div>
+        <div class="studio-activity-item">
+          <div class="studio-activity-icon">✦</div>
+          <div class="studio-activity-text"><b>מיה גולן</b> החלה לעקוב אחרייך</div>
+          <div class="studio-activity-time">לפני 5י׳</div>
+        </div>
+      </div>
+
+    </div><!-- sw-body -->
+  </div><!-- #studio-world -->
+
+  <!-- GLOBAL MAP WORLD — Swipe Down to reveal -->
+  <div id="map-world" class="world-screen">
+
+    <div class="mw-header">
+      <div class="mw-header-text">
+        <div class="mw-eyebrow">World 03 · The Global Layer</div>
+        <div class="mw-title">Global Map</div>
+      </div>
+      <div class="mw-active-count">
+        <span class="mw-active-dot"></span>
+        3 ערים פעילות
+      </div>
+    </div>
+
+    <!-- Map placeholder -->
+    <div class="mw-map-area">
+      <div class="mw-map-grid"></div>
+      <!-- City Pins positioned roughly on Israel map -->
+      <div class="mw-city-pin" style="top:38%; left:44%;">
+        <div class="mw-pin-dot pulse"></div>
+        <div class="mw-pin-label">ת"א</div>
+      </div>
+      <div class="mw-city-pin" style="top:28%; left:38%;">
+        <div class="mw-pin-dot pulse"></div>
+        <div class="mw-pin-label">חיפה</div>
+      </div>
+      <div class="mw-city-pin" style="top:52%; left:47%;">
+        <div class="mw-pin-dot"></div>
+        <div class="mw-pin-label">ירושלים</div>
+      </div>
+      <div class="mw-city-pin" style="top:62%; left:40%;">
+        <div class="mw-pin-dot" style="background:rgba(255,255,255,0.2); box-shadow:none;"></div>
+        <div class="mw-pin-label" style="color:rgba(255,255,255,0.2);">באר שבע</div>
+      </div>
+      <div class="mw-map-placeholder">
+        <div class="mw-map-coming">Interactive Map — Coming Soon</div>
+      </div>
+    </div>
+
+    <!-- City List -->
+    <div class="mw-city-list">
+      <div class="mw-city-row" onclick="selectCity('tel-aviv')">
+        <div class="mw-city-left">
+          <div class="mw-city-status active"></div>
+          <div>
+            <div class="mw-city-name">תל אביב</div>
+            <div class="mw-city-sub">3 גלריות פעילות · 28 פריטים</div>
+          </div>
+        </div>
+        <div class="mw-city-right">
+          <div class="mw-city-count">GS 74</div>
+          <div class="mw-city-arrow">←</div>
+        </div>
+      </div>
+      <div class="mw-city-row" onclick="selectCity('haifa')">
+        <div class="mw-city-left">
+          <div class="mw-city-status active"></div>
+          <div>
+            <div class="mw-city-name">חיפה</div>
+            <div class="mw-city-sub">1 גלריה פעילה · 12 פריטים</div>
+          </div>
+        </div>
+        <div class="mw-city-right">
+          <div class="mw-city-count">GS 51</div>
+          <div class="mw-city-arrow">←</div>
+        </div>
+      </div>
+      <div class="mw-city-row" onclick="selectCity('jerusalem')">
+        <div class="mw-city-left">
+          <div class="mw-city-status active"></div>
+          <div>
+            <div class="mw-city-name">ירושלים</div>
+            <div class="mw-city-sub">1 גלריה פעילה · 9 פריטים</div>
+          </div>
+        </div>
+        <div class="mw-city-right">
+          <div class="mw-city-count">GS 39</div>
+          <div class="mw-city-arrow">←</div>
+        </div>
+      </div>
+      <div class="mw-city-row">
+        <div class="mw-city-left">
+          <div class="mw-city-status inactive"></div>
+          <div>
+            <div class="mw-city-name" style="color:rgba(255,255,255,0.3);">באר שבע</div>
+            <div class="mw-city-sub">בקרוב</div>
+          </div>
+        </div>
+        <div class="mw-city-right">
+          <div class="mw-city-count" style="color:rgba(255,255,255,0.2);">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- #map-world -->
+
+</div><!-- #worlds-container -->
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// ROOM ENVIRONMENT — inline implementation for r128 compatibility
+// Generates a soft studio HDR environment map without external files
+// ═══════════════════════════════════════════════════════════════════════════
+class RoomEnvironment {
+  constructor() {
+    this.type = 'RoomEnvironment';
+  }
+
+  generate(renderer) {
+    const scene = new THREE.Scene();
+
+    // Warm ceiling panels
+    const addLight = (color, intensity, x, y, z, rx, ry, rz) => {
+      const light = new THREE.RectAreaLight(color, intensity, 4, 4);
+      light.position.set(x, y, z);
+      light.rotation.set(rx, ry, rz);
+      scene.add(light);
+    };
+
+    // Ceiling — warm white
+    addLight(0xFFFFFF, 3.0,   0,  4,  0, -Math.PI/2, 0, 0);
+    // Left wall — cool blue-grey
+    addLight(0xE8EEFF, 1.2, -4,  0,  0,  0,  Math.PI/2, 0);
+    // Right wall — warm
+    addLight(0xFFF8F0, 1.2,  4,  0,  0,  0, -Math.PI/2, 0);
+    // Back wall
+    addLight(0xF0F0F0, 0.8,  0,  0, -4,  0,  Math.PI, 0);
+    // Floor bounce — very soft warm
+    addLight(0xFFF4E0, 0.6,  0, -4,  0,  Math.PI/2, 0, 0);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+
+    const renderTarget = pmremGenerator.fromScene(scene, 0.04);
+    pmremGenerator.dispose();
+    return renderTarget.texture;
+  }
+}
+
+// Singleton — generate once, reuse across all scenes
+let _envMap = null;
+let _envMapRenderer = null;
+function getEnvMap(renderer) {
+  if (_envMap && _envMapRenderer === renderer) return _envMap;
+  const env = new RoomEnvironment();
+  _envMap = env.generate(renderer);
+  _envMapRenderer = renderer;
+  return _envMap;
+}
+</script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURATION - GITHUB ASSETS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GitHub repository raw content URL - CLEANED (no refs/heads)
+const GITHUB_ASSETS_BASE_URL = 'https://raw.githubusercontent.com/avisiman/givenmakes-assets/main/assets';
+
+// Helper function to get asset URL
+function getAssetURL(filename) {
+  if (!GITHUB_ASSETS_BASE_URL) {
+    console.warn('⚠️ GITHUB_ASSETS_BASE_URL not set - using relative path');
+    return filename;
+  }
+  return `${GITHUB_ASSETS_BASE_URL}/${filename}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REAL 3D MODEL INJECTION - READY FOR LUMA BABUSHKA
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * injectRealModel - Replace emoji with real .glb model
+ * 
+ * Usage: 
+ *   injectRealModel('models/babushka.glb')
+ * 
+ * This will:
+ * - Replace item #1 in gallery with the real 3D model
+ * - Auto-center and scale the model to fit the museum stage
+ * - Apply proper lighting and shadows
+ * - Enable full interaction (orbit, zoom)
+ */
+function injectRealModel(filePath) {
+  if (!filePath) {
+    console.error('⚠️ No file path provided to injectRealModel()');
+    return;
+  }
+  
+  console.log(`🎨 Injecting real 3D model: ${filePath}`);
+  
+  // Update item #1 in ITEMS array
+  if (ITEMS[0]) {
+    ITEMS[0].modelPath = filePath;
+    console.log(`✓ Updated ITEMS[0].modelPath = "${filePath}"`);
+    
+    // Reload the first gallery card with the real model
+    setTimeout(() => {
+      reloadGalleryCard(1); // itemId = 1
+      console.log('✓ Gallery card reloaded with 3D model');
+    }, 100);
+  } else {
+    console.error('⚠️ ITEMS[0] not found');
+  }
+}
+
+/**
+ * Reload a specific gallery card with updated model
+ */
+function reloadGalleryCard(itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  
+  // Dispose old canvas if exists
+  if (galleryCanvases[itemId]) {
+    const old = galleryCanvases[itemId];
+    if (old.renderer) {
+      old.renderer.dispose();
+    }
+    delete galleryCanvases[itemId];
+  }
+  
+  // Reinitialize the card
+  const canvas = document.getElementById(`gallery-canvas-${itemId}`);
+  const wrap = document.getElementById(`gallery-wrap-${itemId}`);
+  
+  if (!canvas || !wrap) {
+    console.error(`Canvas or wrap not found for item ${itemId}`);
+    return;
+  }
+  
+  const size = Math.min(wrap.offsetWidth, wrap.offsetHeight) || 200;
+  const { renderer, scene, camera, mesh } = createThreeScene(canvas, item, size);
+
+  // Gallery camera override
+  camera.position.z = 2.0;   // 30% smaller than v25
+  camera.position.y = 0;      // centered vertically
+
+  galleryCanvases[itemId] = { renderer, scene, camera, mesh };
+  
+  // Animate
+  const clock = new THREE.Clock();
+  let rotationY = 0;
+  
+  function animate() {
+    requestAnimationFrame(animate);
+    
+    if (mesh) {
+      // Slow, continuous rotation
+      rotationY += 0.003;
+      mesh.rotation.y = rotationY;
+      mesh.position.y = Math.sin(clock.getElapsedTime() * 0.5) * 0.06;
+    }
+    
+    renderer.render(scene, camera);
+  }
+  
+  animate();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ★ DATA  —  edit SHEET_CSV_URL to point to your Google Sheets CSV
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSdtHtDe6ro2QTHnVP9m0JuSQEewP-e17HPXP-sLSeWFXrD2cnCrNh-Bm5r3bieRu9k6ICZnVtriiUH/pub?gid=0&single=true&output=csv';
+
+let ITEMS = []; // populated at runtime
+
+const FALLBACK_ITEMS = [
+  { id:1, emoji:'🪆', modelPath:'babushka.glb', imagePreview:null, isProcessing:false,
+    objectName:'בבושקה מצוירת', category:'צעצועים', title:'בבושקה של סבתא',
+    description:'בובת בבושקה עתיקה מעץ ליפה שנמצאה בעליית גג של בניין ישן ברחוב בן יהודה.',
+    note:'כל שכבה בבבושקה מספרת סיפור משלה.',
+    material:'עץ ליפה + צבעי אקריליק', condition:'שוקם', transformation:'עליית גג → אוסף',
+    location:'תל אביב', city:'תל אביב', creator:'GivenMakes', creatorName:'אבי סימן-טוב',
+    year:null, neighborhood:'בן יהודה', gravityScore:42 },
+  { id:2, emoji:'🪔', modelPath:null, imagePreview:null, isProcessing:false,
+    objectName:'מנורת נחושת', category:'תאורה', title:'אור מהביוב',
+    description:'צינורות נחושת משיפוץ מערכת אינסטלציה הפכו למנורת תליה מינימליסטית.',
+    note:'היצירה מדגימה את היופי הטמון בחומרי גלם תעשייתיים.',
+    material:'נחושת', condition:'נוצר', transformation:'ביוב → תאורה',
+    location:'ירושלים', city:'ירושלים', creator:'שירה לוי', creatorName:'שירה לוי',
+    year:null, neighborhood:'', gravityScore:28 },
+  { id:3, emoji:'🪵', modelPath:null, imagePreview:null, isProcessing:false,
+    objectName:'שולחן קפה', category:'ריהוט', title:'פסים בצריבה',
+    description:'לוח עץ מאתר בנייה נשאר עם סימני השימוש המקוריים.',
+    note:'כל שולחן הוא יחידה בעולם.',
+    material:'עץ + פלדה', condition:'נוצר', transformation:'פסולת → יצירה',
+    location:'חיפה', city:'חיפה', creator:'עמית רוזן', creatorName:'עמית רוזן',
+    year:null, neighborhood:'', gravityScore:19 }
+];
+
+// Parse a single CSV line (handles quoted fields)
+function _csvRow(line, sep) {
+  const res=[]; let cur=''; let q=false;
+  for (let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else{q=!q;}}
+    else if(c===sep&&!q){res.push(cur);cur='';}
+    else{cur+=c;}
+  }
+  res.push(cur); return res;
+}
+
+// Auto-detect CSV vs TSV and parse all rows
+function _parseCSV(text) {
+  const lines = text.split('\n').map(l=>l.replace(/\r$/,''));
+  if (!lines.length) return [];
+  // Auto-detect separator: tab or comma
+  const sep = lines[0].includes('\t') ? '\t' : ',';
+  console.log('📋 Detected separator:', sep === '\t' ? 'TAB (TSV)' : 'COMMA (CSV)');
+  const headers = _csvRow(lines[0], sep).map(h=>h.trim().toLowerCase());
+  console.log('📋 Headers found:', headers);
+  return lines.slice(1).filter(l=>l.trim()).map((line,i)=>{
+    const vals = _csvRow(line, sep);
+    const row={};
+    headers.forEach((h,j)=>{ row[h]=(vals[j]||'').trim(); });
+    return row;
+  });
+}
+
+function _rowToItem(row, idx) {
+  // Case-insensitive field getter with trim
+  const g = (...keys) => {
+    for (const k of keys) {
+      const hit = Object.keys(row).find(h => h.toLowerCase().trim() === k.toLowerCase().trim());
+      if (hit !== undefined && row[hit] !== '') return row[hit];
+    }
+    return '';
+  };
+  const creator = g('creator') || '';
+  const title   = g('title') || '—';
+
+  // Auto-emoji from category if not set in sheet
+  const catEmojiMap = {
+    '\u05e6\u05e2\u05e6\u05d5\u05e2\u05d9\u05dd':'\uD83E\uDEA6',
+    '\u05ea\u05d0\u05d5\u05e8\u05d4':'\uD83E\uDED4',
+    '\u05e8\u05d9\u05d4\u05d5\u05d8':'\uD83E\uDEB5',
+    '\u05db\u05dc\u05d9 \u05d1\u05d9\u05ea':'\uD83C\uDFFA',
+    '\u05d0\u05de\u05e0\u05d5\u05ea':'\uD83C\uDFA8',
+    '\u05d1\u05d9\u05d2\u05d5\u05d3':'\uD83D\uDC57',
+    '\u05d0\u05dc\u05e7\u05d8\u05e8\u05d5\u05e0\u05d9\u05e7\u05d4':'\uD83D\uDCFB',
+    '\u05e1\u05e4\u05e8\u05d9\u05dd':'\uD83D\uDCDA'
+  };
+  const cat   = g('category') || '\u05e2\u05d9\u05e6\u05d5\u05d1';
+  const emoji = g('emoji') || catEmojiMap[cat] || '\uD83D\uDCE6';
+
+  return {
+    id:             parseInt(g('id')) || (idx + 1),
+    emoji,
+    modelPath:      g('modelPath','model','glb') || null,
+    imagePreview:   g('imagePreview','image','preview') || null,
+    isProcessing:   g('isProcessing') === 'true',
+    objectName:     g('objectName','object') || title,
+    category:       cat,
+    title,
+    description:    g('description') || '',
+    note:           g('note','curator_note','curatorNote') || '',
+    material:       g('material') || '',
+    condition:      g('condition') || '',
+    transformation: g('transformation') || '',
+    location:       g('location','city') || '',
+    city:           g('city','location') || '',
+    creator:        creator,
+    creatorName:    g('creatorName','creator_name') || creator,
+    year:           g('year') || null,
+    neighborhood:   g('neighborhood') || '',
+    gravityScore:   parseInt(g('gravityScore','gravity_score','gravityscore','gravity','score')) || 10,
+  };
+}
+
+async function loadItemsFromSheet() {
+  if (!SHEET_CSV_URL) {
+    ITEMS = [...FALLBACK_ITEMS]; return;
+  }
+
+  // Try direct fetch first (works from localhost/web server)
+  // If that fails, try corsproxy (works from file://)
+  const freshUrl = SHEET_CSV_URL + '&t=' + Date.now();
+  const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(freshUrl);
+
+  const attempts = [
+    { label: 'direct', url: freshUrl },
+    { label: 'proxy',  url: proxyUrl }
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      console.log('🔄 Trying', attempt.label, 'fetch...');
+      const res = await Promise.race([
+        fetch(attempt.url, { cache: 'no-store' }),
+        new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 5000))
+      ]);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      if (!text || text.length < 10) throw new Error('empty response');
+
+      const rows = _parseCSV(text);
+      if (!rows.length) throw new Error('0 rows parsed');
+
+      // LOG: show raw first 2 rows to verify freshness
+      const rawLines = text.split('\n');
+      console.log('📋 RAW headers:', rawLines[0]);
+      console.log('📋 RAW row 1:', rawLines[1]);
+      console.log('📋 RAW row 2:', rawLines[2]);
+      console.log('🔑 Parsed row 0:', rows[0]);
+      console.log('🔑 Parsed row 1:', rows[1]);
+
+      ITEMS = rows.map((r,i) => _rowToItem(r,i));
+      console.log('✓ Loaded', ITEMS.length, 'items via', attempt.label);
+      console.log('📦 ITEMS[0]:', JSON.stringify(ITEMS[0]));
+      console.log('📦 ITEMS[1]:', JSON.stringify(ITEMS[1]));
+      return;
+
+    } catch(err) {
+      console.warn('⚠ ' + attempt.label + ' failed:', err.message);
+    }
+  }
+
+  // All attempts failed
+  console.warn('⚠ Using fallback data');
+  ITEMS = [...FALLBACK_ITEMS];
+}
+
+
+let saved = new Set();
+let currentItem = null;
+let detailStatsOpen = false;
+let detailStatsLocked = false;
+
+// Seamless detail state — declared early so animate loop can read them
+let _seamlessActiveCard = null;
+let _seamlessItemId     = null;
+let _seamlessControls   = null;
+let _seamlessIsDetail   = false;
+
+// USER_ITEMS — items awaiting curation, NOT in the main gallery
+// Shape: { id, title, imagePreview, emoji, submittedAt }
+const USER_ITEMS = [];
+let detailRenderer = null;
+let particlesRAF = null;
+const galleryCanvases = {}; // key=itemId, value={renderer, mesh, scene, camera}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOW TO USE 3D MODELS (.glb)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// To replace emoji with real 3D model:
+// 
+// 1. Add your .glb file to the project (e.g., in a /models/ folder)
+// 2. Update the item's modelPath in ITEMS array:
+//
+//    {
+//      id: 1,
+//      emoji: '🪑',           // Keep as fallback
+//      modelPath: 'models/babushka.glb',  // ← ADD THIS
+//      objectName: 'בבושקה',
+//      ...
+//    }
+//
+// 3. The system will automatically:
+//    - Load the .glb model
+//    - Center and scale it properly
+//    - Apply museum lighting
+//    - Enable orbit controls
+//    - Add shadows
+//
+// Supported formats: .glb (recommended), .gltf
+// Model requirements:
+//    - Centered at origin (0,0,0) for best results
+//    - Reasonable polygon count (< 100k faces for mobile)
+//    - Textures baked in or embedded in .glb
+//
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Zoom state
+let currentZoom = 1;
+let currentPanX = 0;
+let currentPanY = 0;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.3;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE.JS SCENE FACTORY - OPTIMIZED FOR LUMA 3D MODELS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function createThreeScene(canvas, item, size) {
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: true,
+    preserveDrawingBuffer: true
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(size, size);
+  renderer.setClearColor(0x000000, 0); // Fully transparent — no white edge artifacts
+  
+  // CRITICAL: Color space for realistic textures from Luma
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2; // Cinematic — balanced with HDR env map
+  
+  // Enable shadows for realistic depth
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const scene = new THREE.Scene();
+  
+  // ── HDR Environment Map — realistic reflections on all materials ──
+  try {
+    const envMap = getEnvMap(renderer);
+    scene.environment = envMap;        // PBR reflections on all meshes
+    // scene.background = null;        // Keep transparent — CSS handles background
+  } catch(e) {
+    console.warn('⚠ HDR env map failed, continuing without:', e.message);
+  }
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 100);
+  camera.position.z = 2.6;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MUSEUM-QUALITY LIGHTING - Optimized for Luma models
+  // Enhanced brightness to clearly show textures
+  // ═══════════════════════════════════════════════════════════════════
+  
+  // ── Gallery Lights — reduced intensity since HDR env map adds base energy ──
+  // Ambient - softer now that env map handles ambient reflections
+  const ambientLight = new THREE.AmbientLight(0xFFFBF0, 0.25);
+  scene.add(ambientLight);
+  
+  // Key Light - main directional, warm museum tone
+  const keyLight = new THREE.DirectionalLight(0xFFF8E8, 0.7);
+  keyLight.position.set(-2, 3.5, 3);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
+  keyLight.shadow.camera.near = 0.5;
+  keyLight.shadow.camera.far = 10;
+  scene.add(keyLight);
+  
+  // Fill Light - cooler, from opposite side
+  const fillLight = new THREE.DirectionalLight(0xE8F0FF, 0.4);
+  fillLight.position.set(3, 1.5, 2);
+  scene.add(fillLight);
+  
+  // Rim/Back Light - edge definition
+  const rimLight = new THREE.DirectionalLight(0xFFFFFF, 0.3);
+  rimLight.position.set(0, 2, -2.5);
+  scene.add(rimLight);
+  
+  // Top accent - museum ceiling
+  const topLight = new THREE.DirectionalLight(0xFFFCF5, 0.25);
+  topLight.position.set(0, 5, 0);
+  scene.add(topLight);
+
+  let mesh = null;
+  let isModelLoaded = false;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PRIORITY SYSTEM: imagePreview > modelPath > emoji
+  // ═══════════════════════════════════════════════════════════════════
+  
+  if (item.imagePreview) {
+    // Show PNG preview while 3D model is processing
+    // This is the INTERIM VIEW
+    // (Note: imagePreview is displayed in HTML, not as 3D mesh)
+    mesh = createEmojiMesh('⏳'); // Placeholder in 3D space
+    scene.add(mesh);
+  } else if (item.modelPath) {
+    // Start with emoji, then replace with 3D when loaded
+    mesh = createEmojiMesh(item.emoji); // IMMEDIATE fallback
+    const tempMesh = mesh;
+    scene.add(mesh);
+    
+    // Load real 3D model - will replace emoji when ready
+    loadModel(item.modelPath, scene, (loadedModel) => {
+      // Remove old mesh
+      scene.remove(tempMesh);
+      // Update mesh reference
+      mesh = loadedModel;
+      isModelLoaded = true;
+      console.log('✓ 3D Model loaded and displayed');
+    }, item.emoji);
+  } else {
+    // Fallback: emoji placeholder
+    mesh = createEmojiMesh(item.emoji);
+    scene.add(mesh);
+  }
+
+  return { renderer, scene, camera, mesh, isModelLoaded: () => isModelLoaded };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOADING MANAGER - Error tracking and display
+// ═══════════════════════════════════════════════════════════════════════════
+
+const loadingManager = new THREE.LoadingManager();
+
+loadingManager.onLoad = function() {
+  console.log('✓ All assets loaded successfully');
+};
+
+loadingManager.onProgress = function(url, loaded, total) {
+  const percent = (loaded / total * 100).toFixed(1);
+  console.log(`📦 Loading: ${percent}% (${loaded}/${total})`);
+};
+
+loadingManager.onError = function(url) {
+  console.error('✗ Loading error:', url);
+  
+  // Display error in UI
+  const errorMsg = 'בדיקת איכות נכשלה - נתיב לא נמצא';
+  
+  // Try to find the item wrapper and show error
+  const itemId = getCurrentLoadingItemId();
+  if (itemId) {
+    showLoadingError(itemId, errorMsg);
+  }
+};
+
+let currentLoadingItemId = null;
+
+function setCurrentLoadingItemId(id) {
+  currentLoadingItemId = id;
+}
+
+function getCurrentLoadingItemId() {
+  return currentLoadingItemId;
+}
+
+function showLoadingError(itemId, message) {
+  const wrap = document.getElementById(`gallery-wrap-${itemId}`);
+  if (!wrap) return;
+  
+  // Create error overlay
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'loading-error-overlay';
+  errorDiv.innerHTML = `
+    <div class="loading-error-icon">⚠️</div>
+    <div class="loading-error-text">${message}</div>
+  `;
+  
+  wrap.appendChild(errorDiv);
+  
+  console.log(`💡 Error displayed for item ${itemId}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOAD 3D MODEL (.glb) - WITH CORS, LOADING MANAGER & SMART FALLBACK
+// ═══════════════════════════════════════════════════════════════════════════
+// 
+// CORS Support: GLTFLoader works with cross-origin URLs (GitHub, CDN, etc.)
+// GitHub's raw.githubusercontent.com provides proper CORS headers automatically
+//
+function loadModel(modelPath, scene, onLoadCallback, fallbackEmoji = '📦') {
+  const loader = new THREE.GLTFLoader();
+  
+  // Get full URL (GitHub or local)
+  const fullURL = getAssetURL(modelPath);
+  
+  console.log(`🎨 Loading 3D model: ${fullURL}`);
+  
+  loader.load(
+    fullURL,
+    (gltf) => {
+      const model = gltf.scene;
+      
+      // ═══════════════════════════════════════════════════════════════
+      // AUTO-CENTERING: Precise Bounding Box alignment
+      // ═══════════════════════════════════════════════════════════════
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      
+      // Precise centering - subtract center
+      model.position.sub(center);
+      
+      // ═══════════════════════════════════════════════════════════════
+      // AUTO-FRAME: Scale to 1.2 units for perfect framing
+      // ═══════════════════════════════════════════════════════════════
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 1.2 / maxDim;
+      model.scale.setScalar(scale);
+
+      // Recenter after scale (no rotation — models arrive pre-aligned from Blender)
+      const boxFinal = new THREE.Box3().setFromObject(model);
+      const centerFinal = boxFinal.getCenter(new THREE.Vector3());
+      model.position.sub(centerFinal);
+
+      console.log(`✓ Model centered at (0,0,0)`);
+      console.log(`✓ Scaled by: ${scale.toFixed(3)}x`);
+      
+      // ═══════════════════════════════════════════════════════════════
+      // MATERIAL ENHANCEMENT: Shadows + Realistic rendering
+      // ═══════════════════════════════════════════════════════════════
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          
+          // Ensure materials render correctly in sRGB space
+          if (child.material) {
+            child.material.needsUpdate = true;
+            
+            // Preserve Luma's PBR values (roughness/metalness)
+            // Don't override - Luma exports realistic material properties
+            if (child.material.map) {
+              child.material.map.encoding = THREE.sRGBEncoding;
+            }
+          }
+        }
+      });
+      
+      scene.add(model);
+      
+      if (onLoadCallback) {
+        onLoadCallback(model);
+      }
+      
+      console.log(`✓ Model loaded successfully: ${fullURL}`);
+    },
+    (xhr) => {
+      // Progress callback
+      if (xhr.lengthComputable) {
+        const percentComplete = (xhr.loaded / xhr.total) * 100;
+        console.log(`📦 Loading: ${percentComplete.toFixed(1)}%`);
+      }
+    },
+    (error) => {
+      console.error(`✗ Error loading model: ${fullURL}`);
+      console.error('Error details:', error);
+      
+      // ═══════════════════════════════════════════════════════════════
+      // SMART FALLBACK: Return to emoji if model fails
+      // ═══════════════════════════════════════════════════════════════
+      console.log(`🔄 Falling back to emoji: ${fallbackEmoji}`);
+      
+      const fallbackMesh = createEmojiMesh(fallbackEmoji);
+      scene.add(fallbackMesh);
+      
+      if (onLoadCallback) {
+        onLoadCallback(fallbackMesh);
+      }
+      
+      // User-friendly warning
+      if (error.target && error.target.status === 404) {
+        console.warn('💡 Model not found - make sure the file exists in your GitHub repository');
+      } else if (error.message && error.message.includes('CORS')) {
+        console.warn('💡 CORS error - make sure your GitHub repository is public or configure CORS headers');
+      }
+    }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CREATE EMOJI MESH (Fallback)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function createEmojiMesh(emoji) {
+  // Create emoji texture
+  const textureCanvas = document.createElement('canvas');
+  textureCanvas.width = textureCanvas.height = 512;
+  const ctx = textureCanvas.getContext('2d');
+  ctx.font = '210px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, 256, 256);
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  texture.encoding = THREE.sRGBEncoding; // Correct color space
+
+  // Create displacement map
+  const dispCanvas = document.createElement('canvas');
+  dispCanvas.width = dispCanvas.height = 128;
+  const dctx = dispCanvas.getContext('2d');
+  dctx.drawImage(textureCanvas, 0, 0, 128, 128);
+  const imageData = dctx.getImageData(0, 0, 128, 128);
+  
+  // Convert to grayscale for displacement
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const luminance = imageData.data[i] * 0.3 + 
+                     imageData.data[i + 1] * 0.59 + 
+                     imageData.data[i + 2] * 0.11;
+    imageData.data[i] = imageData.data[i + 1] = imageData.data[i + 2] = luminance;
+  }
+  dctx.putImageData(imageData, 0, 0);
+  const displacementTexture = new THREE.CanvasTexture(dispCanvas);
+
+  // Create mesh with displacement
+  const geometry = new THREE.PlaneGeometry(2, 2, 64, 64);
+  const material = new THREE.MeshStandardMaterial({
+    map: texture,
+    displacementMap: displacementTexture,
+    displacementScale: 0.11,
+    displacementBias: -0.04,
+    transparent: true,
+    alphaTest: 0.05,
+    roughness: 0.3,
+    metalness: 0.04,
+    side: THREE.DoubleSide
+  });
+  
+  return new THREE.Mesh(geometry, material);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GALLERY FEED - HORIZONTAL SWIPEABLE CARDS
+// ═══════════════════════════════════════════════════════════════════════════
+
+let currentCardIndex = 0;
+let isSwiping = false;
+
+function initGallery() {
+  const track = document.getElementById('gallery-track');
+  const dotsContainer = document.getElementById('gallery-dots');
+  
+  ITEMS.forEach((item, index) => {
+    // Create card
+    const card = document.createElement('div');
+    card.className = 'gallery-card';
+    card.dataset.index = index;
+    card.dataset.itemId = item.id;
+    
+    // Processing badge (if item is being processed)
+    const processingBadge = item.isProcessing ? `
+      <div class="processing-badge">
+        <span class="processing-badge-icon"></span>
+        <span>בתהליך אוצרות</span>
+      </div>
+    ` : '';
+    
+    // Image preview (if available, while 3D loads)
+    const imagePreview = item.imagePreview ? `
+      <img src="${item.imagePreview}" class="gallery-preview-image" alt="${item.title}">
+    ` : '';
+    
+    // Skeleton loader (if processing and no preview yet)
+    const skeleton = (item.isProcessing && !item.imagePreview && !item.modelPath) ? `
+      <div class="skeleton-loader"></div>
+    ` : '';
+    
+    card.innerHTML = `
+      <div class="gallery-card-stage">
+        ${processingBadge}
+        ${imagePreview}
+        ${skeleton}
+        <div class="gallery-obj-wrap" id="gallery-wrap-${item.id}" style="${item.imagePreview ? 'opacity: 0;' : ''}">
+          <canvas id="gallery-canvas-${item.id}"></canvas>
+        </div>
+        <div class="gallery-floor-shadow"></div>
+      </div>
+      <div class="gallery-card-info">
+        <div class="gallery-cat">${item.category}</div>
+        <div class="gallery-title">${item.title}</div>
+        <div class="gallery-creator-row">
+          <span class="gallery-creator-link" onclick="event.stopPropagation(); openPublicProfile('${item.creatorName || item.creator}')">${item.creatorName || item.creator}</span>
+          <span class="gallery-creator-sep">·</span>
+          <span class="gallery-year">${item.year || 'Vintage'}</span>
+        </div>
+        <div class="gallery-location">${item.city || item.location || ''}</div>
+      </div>
+      <!-- Floating back button only — no header bar -->
+      <button class="detail-back-float" onclick="event.stopPropagation(); closeDetailSeamless()">חזרה</button>
+      <div class="detail-info-strip">
+        <div class="detail-info-title-sm">${item.title}</div>
+        <div class="detail-info-meta">${item.creatorName || item.creator} · ${item.city || item.location || ''}</div>
+      </div>
+    `;
+    
+    track.appendChild(card);
+    
+    // Create dot
+    const dot = document.createElement('div');
+    dot.className = 'gallery-dot' + (index === 0 ? ' active' : '');
+    dotsContainer.appendChild(dot);
+    
+    // Initialize Three.js scene for this card (unless showing image preview)
+    if (!item.imagePreview) {
+      setTimeout(() => initGalleryCard(item.id), 100 + index * 50);
+    }
+  });
+  
+  // Setup scroll navigation
+  setupScrollNavigation();
+}
+
+function initGalleryCard(itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  
+  const canvas = document.getElementById(`gallery-canvas-${itemId}`);
+  const wrap = document.getElementById(`gallery-wrap-${itemId}`);
+  if (!canvas || !wrap) return;
+  
+  const size = Math.min(wrap.offsetWidth, wrap.offsetHeight) || 200;
+  const { renderer, scene, camera, mesh } = createThreeScene(canvas, item, size);
+
+  // Gallery camera override: closer = larger, offset down = nearer to text block
+  camera.position.z = 2.0;   // 30% smaller than v25
+  camera.position.y = 0;      // centered vertically
+
+  galleryCanvases[itemId] = { renderer, scene, camera, mesh };
+  
+  // PREVIEW MODE: Slow auto-rotation only, no user interaction
+  const clock = new THREE.Clock();
+  let rotationY = 0;
+  
+  function animate() {
+    requestAnimationFrame(animate);
+    
+    // Guard: skip if mesh not loaded yet
+    const currentMesh = galleryCanvases[itemId]?.mesh;
+    if (!currentMesh) {
+      renderer.render(scene, camera);
+      return;
+    }
+
+    // Guard: pause gallery loop only when OrbitControls are active
+    // During tween (_seamlessIsDetail=true but controls=null), this loop also pauses
+    if (_seamlessItemId === itemId && (_seamlessControls || _seamlessIsDetail)) {
+      if (_seamlessControls) _seamlessControls.update();
+      renderer.render(scene, camera);
+      return;
+    }
+
+    // Sync rotationY with actual mesh after returning from detail (tween snapped to 0)
+    if (currentMesh.rotation.y !== rotationY && Math.abs(currentMesh.rotation.y - rotationY) > 0.1) {
+      rotationY = currentMesh.rotation.y;
+    }
+    
+    rotationY += 0.003;
+    currentMesh.rotation.y = rotationY;
+    currentMesh.position.y = Math.sin(clock.getElapsedTime() * 0.5) * 0.06;
+    
+    renderer.render(scene, camera);
+  }
+  
+  animate();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SWIPE NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GALLERY - CSS SCROLL SNAP NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function setupScrollNavigation() {
+  const screen = document.getElementById('gallery-screen');
+  const track = document.getElementById('gallery-track');
+  
+  // Update current index and dots on scroll
+  let scrollTimeout;
+  screen.addEventListener('scroll', () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      updateCurrentCardFromScroll();
+    }, 100);
+  }, { passive: true });
+  
+  // TAP TO OPEN DETAIL - simple click on card
+  track.addEventListener('click', e => {
+    // Don't open if clicking overlay buttons
+    if (e.target.closest('.detail-back-float')) return;
+    if (e.target.closest('.gallery-btn')) return;
+    
+    const card = e.target.closest('.gallery-card');
+    if (!card) return;
+
+    // If already in detail mode on this card, do nothing
+    if (card.classList.contains('detail-active')) return;
+
+    const itemId = parseInt(card.dataset.itemId);
+    openDetailSeamless(itemId);
+  });
+  
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('detail-page').classList.contains('open')) return;
+    
+    const activeScreen = document.querySelector('.screen.active');
+    if (activeScreen && activeScreen.id !== 'gallery-screen') return;
+    
+    if (e.key === 'ArrowLeft') scrollToCard(currentCardIndex + 1);
+    if (e.key === 'ArrowRight') scrollToCard(currentCardIndex - 1);
+  });
+}
+
+function updateCurrentCardFromScroll() {
+  const screen = document.getElementById('gallery-screen');
+  
+  // Get actual scroll position
+  const scrollLeft = screen.scrollLeft;
+  const cardWidth = screen.offsetWidth; // Each card is exactly screen width
+  
+  // Calculate which card is currently in view
+  const cardIndex = Math.round(scrollLeft / cardWidth);
+  
+  currentCardIndex = Math.max(0, Math.min(ITEMS.length - 1, cardIndex));
+  
+  // Update dots
+  const dots = document.querySelectorAll('.gallery-dot');
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('active', i === currentCardIndex);
+  });
+}
+
+function scrollToCard(index) {
+  if (index < 0 || index >= ITEMS.length) return;
+  
+  const screen = document.getElementById('gallery-screen');
+  const cardWidth = screen.offsetWidth;
+  
+  screen.scrollTo({
+    left: index * cardWidth,
+    behavior: 'smooth'
+  });
+  
+  currentCardIndex = index;
+}
+
+function toggleSaveFromGallery(itemId) {
+  if (saved.has(itemId)) {
+    saved.delete(itemId);
+  } else {
+    saved.add(itemId);
+  }
+  
+  const saveBtn = document.getElementById(`save-btn-${itemId}`);
+  const saveIcon = document.getElementById(`save-icon-${itemId}`);
+  
+  if (saved.has(itemId)) {
+    saveBtn.classList.add('saved');
+    saveIcon.textContent = '♥';
+  } else {
+    saveBtn.classList.remove('saved');
+    saveIcon.textContent = '♡';
+  }
+  
+  updateSaved();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DETAIL PAGE - ULTRA HD ZOOM
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SEAMLESS GALLERY → DETAIL TRANSITION
+// Rule: model stays fixed. Only CSS bg/text change. OrbitControls on same canvas.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function openDetailSeamless(itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  const card = document.querySelector(`.gallery-card[data-item-id="${itemId}"]`);
+  if (!card) { openDetail(itemId); return; }
+  if (_seamlessActiveCard && _seamlessActiveCard !== card) _closeSeamlessImmediate();
+
+  _seamlessActiveCard = card;
+  _seamlessItemId     = itemId;
+  _seamlessIsDetail   = true;
+  currentItem         = itemId;
+
+  document.getElementById('gallery-screen').classList.add('detail-mode');
+  card.classList.add('detail-active');
+
+  // Enable OrbitControls on the EXISTING canvas — no new model, no new renderer
+  const canvasData = galleryCanvases[itemId];
+  if (canvasData && !_seamlessControls) {
+    const canvas = document.getElementById(`gallery-canvas-${itemId}`);
+    const { camera } = canvasData;
+    const ctrl = new THREE.OrbitControls(camera, canvas);
+    ctrl.enableDamping   = true;
+    ctrl.dampingFactor   = 0.05;
+    ctrl.rotateSpeed     = 0.75;
+    ctrl.enablePan       = false;
+    ctrl.enableZoom      = true;
+    ctrl.minDistance     = 1.2;
+    ctrl.maxDistance     = 5.0;
+    ctrl.zoomSpeed       = 0.7;
+    ctrl.autoRotate      = true;
+    ctrl.autoRotateSpeed = 0.5;
+    ctrl.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE };
+    ctrl.target.set(0, 0, 0);
+    ctrl.update();
+    ctrl.addEventListener('start', () => { ctrl.autoRotate = false; ctrl.target.set(0,0,0); });
+    ctrl.addEventListener('end',   () => {
+      ctrl.target.set(0,0,0); ctrl.update();
+      setTimeout(() => { if (_seamlessIsDetail) ctrl.autoRotate = true; }, 2000);
+    });
+    _seamlessControls      = ctrl;
+    window._detailControls = ctrl;
+  }
+
+  // ── DETAIL BACKLIGHT — rim light from upper-left behind object ──
+  if (canvasData) {
+    const backlight = new THREE.SpotLight(0xffffff, 15);
+    backlight.position.set(-5, 8, -6);
+    backlight.target.position.set(0, 0, 0);
+    backlight.angle    = Math.PI / 8;
+    backlight.penumbra = 0.6;
+    backlight.decay    = 1.8;
+    backlight.castShadow = false;
+    backlight.name = '_detailBacklight';
+    canvasData.scene.add(backlight);
+    canvasData.scene.add(backlight.target);
+  }
+
+  // ── EXPAND canvas to full screen + set beam as wrap background ──
+  if (canvasData) {
+    const wrap = document.getElementById(`gallery-wrap-${itemId}`);
+    // Store original square size before CSS changes it
+    const origSize = Math.min(wrap.offsetWidth, wrap.offsetHeight) || 400;
+    canvasData._origSize = origSize;
+
+    // Set beam image as background of the wrap (canvas is transparent on top)
+    const beamUrl = 'https://raw.githubusercontent.com/avisiman/givenmakes-assets/main/assets/beam.jpg';
+    wrap.style.backgroundImage = `url('${beamUrl}')`;
+
+    requestAnimationFrame(() => {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      canvasData.renderer.setSize(W, H);
+      canvasData.camera.aspect = W / H;
+      canvasData.camera.updateProjectionMatrix();
+      canvasData.camera.position.z = 3.2;
+      if (_seamlessControls) {
+        _seamlessControls.minDistance = 2.0;
+        _seamlessControls.maxDistance = 7.0;
+        _seamlessControls.update();
+      }
+      canvasData._detailExpanded = true;
+    });
+  }
+
+  history.pushState({ gm: 'active' }, '');
+}
+
+function closeDetailSeamless() {
+  if (!_seamlessActiveCard) return;
+  const card       = _seamlessActiveCard;
+  const itemId     = _seamlessItemId;
+  const canvasData = galleryCanvases[itemId];
+
+  // 0. Remove beam background from wrap + restore renderer
+  if (canvasData && canvasData._detailExpanded) {
+    const wrap = document.getElementById(`gallery-wrap-${itemId}`);
+    // Clear beam background immediately
+    if (wrap) wrap.style.backgroundImage = 'none';
+    // Use stored original size — don't rely on offsetWidth after CSS changes
+    const size = canvasData._origSize || 400;
+    canvasData.renderer.setSize(size, size);
+    canvasData.camera.aspect = 1;
+    canvasData.camera.position.z = 2.0;
+    canvasData.camera.updateProjectionMatrix();
+    canvasData._detailExpanded = false;
+  }
+
+  // 0c. Remove detail backlight from scene
+  if (canvasData && canvasData.scene) {
+    const bl = canvasData.scene.getObjectByName('_detailBacklight');
+    if (bl) {
+      bl.intensity = 0;
+      if (bl.target) canvasData.scene.remove(bl.target);
+      canvasData.scene.remove(bl);
+    }
+  }
+
+  // 1. Dispose OrbitControls immediately — reset target first
+  if (_seamlessControls) {
+    _seamlessControls.target.set(0, 0, 0);
+    _seamlessControls.update();
+    _seamlessControls.dispose();
+    _seamlessControls      = null;
+    window._detailControls = null;
+  }
+
+  // 2. Hard-reset camera to gallery values — no tween, no drift
+  if (canvasData) {
+    canvasData.camera.position.set(0, 0, 2.0);
+    canvasData.camera.lookAt(0, 0, 0);
+  }
+
+  // 3. Reset world-navigation accumulators — fresh start, no ghost swipe
+  wTouchStartY    = 0;
+  wTouchStartX    = 0;
+  wIsDraggingWorld = false;
+  wheelAccum      = 0;
+
+  // 3. Tween ONLY mesh x/z rotation — gallery loop takes over y
+  const mesh = canvasData?.mesh;
+  if (mesh && canvasData) {
+    const { renderer, scene, camera } = canvasData;
+    const startX = mesh.rotation.x;
+    const startZ = mesh.rotation.z;
+    // Normalize Y to nearest multiple of 2π so tween goes shortest path
+    const startY = mesh.rotation.y;
+    const targetY = Math.round(startY / (Math.PI * 2)) * Math.PI * 2;
+    const t0     = performance.now();
+    const ease   = t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+
+    // Keep _seamlessIsDetail true during tween so gallery loop stays paused
+    _seamlessIsDetail = true;
+
+    function tick(now) {
+      const raw = Math.min(1, (now - t0) / 800);
+      const e   = ease(raw);
+      mesh.rotation.x = startX * (1 - e);
+      mesh.rotation.z = startZ * (1 - e);
+      mesh.rotation.y = startY + (targetY - startY) * e;
+      renderer.render(scene, camera);
+      if (raw < 1) { requestAnimationFrame(tick); return; }
+
+      // Tween done — hand back to gallery loop
+      mesh.rotation.set(0, 0, 0); // full reset — gallery loop takes over from 0
+      _seamlessIsDetail   = false;
+      _seamlessActiveCard = null;
+      _seamlessItemId     = null;
+      currentItem         = null;
+      card.classList.remove('detail-active');
+      document.getElementById('gallery-screen').classList.remove('detail-mode');
+    }
+    requestAnimationFrame(tick);
+
+  } else {
+    _seamlessIsDetail   = false;
+    _seamlessActiveCard = null;
+    _seamlessItemId     = null;
+    currentItem         = null;
+    card.classList.remove('detail-active');
+    document.getElementById('gallery-screen').classList.remove('detail-mode');
+  }
+}
+
+function _closeSeamlessImmediate() {
+  if (!_seamlessActiveCard) return;
+  // Immediate cleanup: clear beam bg + restore renderer
+  const cd = galleryCanvases[_seamlessItemId];
+  if (cd && cd._detailExpanded) {
+    const wrap = document.getElementById(`gallery-wrap-${_seamlessItemId}`);
+    if (wrap) wrap.style.backgroundImage = 'none';
+    const size = cd._origSize || 400;
+    cd.renderer.setSize(size, size);
+    cd.camera.aspect = 1;
+    cd.camera.position.z = 2.0;
+    cd.camera.updateProjectionMatrix();
+    cd._detailExpanded = false;
+  }
+  // Remove backlight if present
+  if (cd && cd.scene) {
+    const bl = cd.scene.getObjectByName('_detailBacklight');
+    if (bl) { bl.intensity = 0; if (bl.target) cd.scene.remove(bl.target); cd.scene.remove(bl); }
+  }
+  _seamlessActiveCard.classList.remove('detail-active');
+  document.getElementById('gallery-screen').classList.remove('detail-mode');
+  if (_seamlessControls) { _seamlessControls.dispose(); _seamlessControls = null; }
+  window._detailControls = null;
+  _seamlessActiveCard = _seamlessItemId = null;
+  _seamlessIsDetail = false;
+}
+
+function toggleSaveSeamless(itemId) {
+  if (saved.has(itemId)) saved.delete(itemId); else saved.add(itemId);
+  const btn = document.getElementById(`detail-save-btn-${itemId}`);
+  if (btn) {
+    btn.textContent = saved.has(itemId) ? '♥' : '♡';
+    btn.classList.toggle('saved', saved.has(itemId));
+  }
+  updateSaved();
+}
+
+function openDetail(itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  
+  currentItem = itemId;
+  
+  // Update info panel
+  document.getElementById('detail-cat').textContent = `${item.category} · ${item.transformation}`;
+  document.getElementById('detail-title').textContent = item.title;
+  document.getElementById('detail-description').textContent = item.description;
+  document.getElementById('detail-note').textContent = item.note;
+  
+  // Update specs
+  const specs = document.getElementById('detail-specs');
+  specs.innerHTML = `
+    <span class="spec-chip"><b>מצב</b> ${item.condition}</span>
+    <span class="spec-chip"><b>חומר</b> ${item.material}</span>
+    <span class="spec-chip"><b>מיקום</b> ${item.location}</span>
+    <span class="spec-chip"><b>יוצר</b> ${item.creator}</span>
+  `;
+  
+  // Update save button
+  const saveBtn = document.getElementById('detail-save-btn');
+  saveBtn.textContent = saved.has(itemId) ? '♥' : '♡';
+  saveBtn.className = 'detail-save-icon' + (saved.has(itemId) ? ' saved' : '');
+  
+  // Reset zoom
+  currentZoom = 1;
+  currentPanX = 0;
+  currentPanY = 0;
+  updateZoomTransform();
+  
+  // Initialize 3D object (or curation placeholder)
+  if (detailRenderer) {
+    detailRenderer.dispose();
+    detailRenderer = null;
+  }
+
+  const detailStage = document.getElementById('detail-stage');
+
+  // Remove any previous curation overlay
+  const oldOverlay = detailStage.querySelector('.curation-placeholder');
+  if (oldOverlay) oldOverlay.remove();
+
+  if (item.isProcessing) {
+    // Show image + curation message instead of broken 3D
+    const wrap = document.getElementById('detail-obj-wrap');
+    wrap.style.display = 'none';
+    document.querySelector('.zoom-controls').style.display = 'none';
+    document.getElementById('zoom-indicator').style.display = 'none';
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'curation-placeholder';
+    placeholder.innerHTML = `
+      ${item.imagePreview
+        ? `<img src="${item.imagePreview}" class="curation-preview-img" alt="${item.title}">`
+        : `<div class="curation-preview-emoji">${item.emoji || '📦'}</div>`
+      }
+      <div class="curation-message">
+        <div class="curation-pulse"></div>
+        <div class="curation-text">הפריט נסרק כעת על ידי האוצר.<br>הודעה תישלח כשיהיה מוכן ✦</div>
+      </div>
+    `;
+    detailStage.appendChild(placeholder);
+
+    document.getElementById('detail-page').classList.add('open');
+
+    return; // Skip Three.js init entirely
+  }
+
+  // Normal flow — restore visibility if coming from curation
+  document.getElementById('detail-obj-wrap').style.display = '';
+  document.querySelector('.zoom-controls').style.display = '';
+  document.getElementById('zoom-indicator').style.display = '';
+
+  const wrap = document.getElementById('detail-obj-wrap');
+  const canvas = document.getElementById('detail-canvas');
+  const size = 300;
+  
+  const { renderer, scene, camera, mesh } = createThreeScene(canvas, item, size);
+  detailRenderer = renderer;
+  detailRenderer.setClearColor(0x000000, 0); // Fully transparent — object floats over CSS background
+
+  // ── DETAIL SPOTLIGHT — theatrical, gradual — preserved from v57 ──
+  // Dominant spotlight from above — drama and depth
+  // Intensity reduced: HDR env map now contributes ambient energy
+  const spotlight = new THREE.SpotLight(0xFFF5DC, 2.2);
+  spotlight.position.set(0.5, 5, 2);
+  spotlight.target.position.set(0, 0, 0);
+  spotlight.angle = Math.PI / 7;
+  spotlight.penumbra = 0.6;      // Slightly softer edge for museum feel
+  spotlight.decay = 1.5;
+  spotlight.castShadow = false;  // Skip for performance
+  scene.add(spotlight);
+  scene.add(spotlight.target);
+
+  // Cold rim from behind — separates object, subtle with HDR
+  const rimLight = new THREE.PointLight(0x6688AA, 0.5, 6);
+  rimLight.position.set(-1.5, 0.5, -2.5);
+  scene.add(rimLight);
+
+  // Dim gallery ambient so spotlight contrast reads clearly
+  scene.traverse(obj => {
+    if (obj.isAmbientLight) obj.intensity = 0.08;
+  });
+
+  // Camera fill — very soft
+  const cameraLight = new THREE.DirectionalLight(0xFFFAF0, 0.15);
+  cameraLight.position.set(0, 0, 1);
+  camera.add(cameraLight);
+  scene.add(camera);
+  
+  // Setup OrbitControls — Museum configuration
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;      // Smooth, weighted feel
+  controls.rotateSpeed = 0.75;
+
+  // Lock object to origin — no panning ever
+  controls.enablePan = false;
+
+  // Enable native zoom (scroll/pinch) with tight bounds
+  controls.enableZoom = true;
+  controls.minDistance = 1.4;         // Can't enter the model
+  controls.maxDistance = 4.5;         // Can't lose it from view
+  controls.zoomSpeed = 0.7;
+
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.5;
+
+  // Touch: rotate with 1 finger, zoom with 2
+  controls.touches = {
+    ONE: THREE.TOUCH.ROTATE,
+    TWO: THREE.TOUCH.DOLLY_ROTATE    // Pinch = zoom only, no pan
+  };
+
+  // Full 360° rotation freedom
+  controls.minPolarAngle = 0;
+  controls.maxPolarAngle = Math.PI;
+  controls.minAzimuthAngle = -Infinity;
+  controls.maxAzimuthAngle = Infinity;
+
+  // Lock target to origin — object stays centered
+  controls.target.set(0, 0, 0);
+  camera.position.set(0, 0, 2.6);
+  controls.update();
+  
+  const clock = new THREE.Clock();
+
+  // ── ZOOM via OrbitControls camera distance only (no CSS transform) ──
+  // Reset any leftover CSS zoom from previous sessions
+  document.getElementById('detail-obj-wrap').style.transform = '';
+  currentZoom = 1; currentPanX = 0; currentPanY = 0;
+  document.getElementById('zoom-indicator').textContent = '100%';
+  document.getElementById('detail-obj-container').classList.remove('zoomed');
+
+  // Button zoom: move camera closer/farther, clamped by minDistance/maxDistance
+  window._detailControls = controls; // expose for zoomIn/zoomOut buttons
+
+  // Pinch: let OrbitControls handle natively (enableZoom=true, DOLLY_ROTATE)
+  // No custom touch listener needed — OrbitControls owns it
+
+  // Disable auto-rotate when user interacts
+  controls.addEventListener('start', () => {
+    controls.autoRotate = false;
+    // Re-lock target every interaction start — prevents drift
+    controls.target.set(0, 0, 0);
+  });
+
+  controls.addEventListener('end', () => {
+    // Re-lock target after every gesture
+    controls.target.set(0, 0, 0);
+    controls.update();
+    setTimeout(() => { controls.autoRotate = true; }, 2000);
+  });
+  
+  // Animation loop
+  function animate() {
+    if (!detailRenderer) return;
+    requestAnimationFrame(animate);
+    
+    controls.update(); // Required for damping
+    
+    if (mesh) {
+      mesh.position.y = Math.sin(clock.getElapsedTime() * 0.6) * 0.05;
+    }
+    
+    renderer.render(scene, camera);
+  }
+  
+  animate();
+  
+  // Start particles
+  startParticles();
+  
+  // Open detail page
+  document.getElementById('detail-page').classList.add('open');
+
+}
+
+function closeDetail() {
+  document.getElementById('detail-page').classList.remove('open');
+  
+  // Clean up curation placeholder and restore normal UI
+  const detailStage = document.getElementById('detail-stage');
+  const oldOverlay = detailStage.querySelector('.curation-placeholder');
+  if (oldOverlay) oldOverlay.remove();
+  document.getElementById('detail-obj-wrap').style.display = '';
+  document.querySelector('.zoom-controls').style.display = '';
+  document.getElementById('zoom-indicator').style.display = '';
+
+  // Close stats overlay if open (no history.back — detail itself handles it)
+  if (typeof detailStatsOpen !== 'undefined' && detailStatsOpen) {
+    detailStatsOpen = false;
+    document.getElementById('detail-stats-overlay').classList.remove('open');
+  }
+
+  if (detailRenderer) {
+    detailRenderer.dispose();
+    detailRenderer = null;
+  }
+  
+  stopParticles();
+  currentItem = null;
+
+  // If closed by button/swipe (not back), sync history
+
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZOOM CONTROLS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function zoomIn() {
+  const ctrl = window._detailControls;
+  if (!ctrl) return;
+  // Move camera closer by reducing distance
+  const dir = ctrl.object.position.clone().sub(ctrl.target).normalize();
+  const dist = ctrl.object.position.distanceTo(ctrl.target);
+  const newDist = Math.max(ctrl.minDistance, dist - 0.4);
+  ctrl.object.position.copy(ctrl.target).addScaledVector(dir, newDist);
+  ctrl.update();
+  const pct = Math.round((ctrl.maxDistance - newDist) / (ctrl.maxDistance - ctrl.minDistance) * 100);
+  document.getElementById('zoom-indicator').textContent = `${Math.min(200, 100 + Math.round((ctrl.maxDistance - newDist) / (ctrl.maxDistance - ctrl.minDistance) * 100))}%`;
+}
+
+function zoomOut() {
+  const ctrl = window._detailControls;
+  if (!ctrl) return;
+  const dir = ctrl.object.position.clone().sub(ctrl.target).normalize();
+  const dist = ctrl.object.position.distanceTo(ctrl.target);
+  const newDist = Math.min(ctrl.maxDistance, dist + 0.4);
+  ctrl.object.position.copy(ctrl.target).addScaledVector(dir, newDist);
+  ctrl.update();
+  document.getElementById('zoom-indicator').textContent = `${Math.max(50, Math.round(100 - (newDist - ctrl.minDistance) / (ctrl.maxDistance - ctrl.minDistance) * 50))}%`;
+}
+
+function resetZoom() {
+  const ctrl = window._detailControls;
+  if (ctrl) {
+    ctrl.object.position.set(0, 0, 2.6);
+    ctrl.target.set(0, 0, 0);
+    ctrl.update();
+  }
+  currentZoom = 1; currentPanX = 0; currentPanY = 0;
+  const wrap = document.getElementById('detail-obj-wrap');
+  if (wrap) wrap.style.transform = '';
+  document.getElementById('zoom-indicator').textContent = '100%';
+  document.getElementById('detail-obj-container').classList.remove('zoomed');
+}
+
+function updateZoomTransform() {
+  // No-op — zoom is now handled by OrbitControls camera distance
+  // CSS transform only used for gallery, not detail page
+}
+
+// Pan via CSS removed — OrbitControls owns all mouse/touch interaction.
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panStartOffsetX = 0;
+let panStartOffsetY = 0;
+
+// Touch pan listeners removed — OrbitControls handles touch rotate + pinch zoom natively.
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PARTICLES (Museum dust effect)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function startParticles() {
+  stopParticles();
+  
+  const canvas = document.getElementById('particles-canvas');
+  const stage = document.getElementById('detail-stage');
+  canvas.width = stage.offsetWidth;
+  canvas.height = stage.offsetHeight;
+  
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  
+  const particles = Array.from({ length: 20 }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    r: 0.6 + Math.random() * 1.5,
+    o: 0.04 + Math.random() * 0.12
+  }));
+  
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      if (p.x < 0) p.x = W;
+      if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;
+      if (p.y > H) p.y = 0;
+      
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180, 148, 100, ${p.o})`;
+      ctx.fill();
+    });
+    
+    particlesRAF = requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+function stopParticles() {
+  if (particlesRAF) {
+    cancelAnimationFrame(particlesRAF);
+    particlesRAF = null;
+  }
+  
+  const canvas = document.getElementById('particles-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SAVED FUNCTIONALITY
+// ═══════════════════════════════════════════════════════════════════════════
+
+function toggleSaveFromDetail() {
+  if (currentItem === null) return;
+  
+  if (saved.has(currentItem)) {
+    saved.delete(currentItem);
+  } else {
+    saved.add(currentItem);
+  }
+  
+  const saveBtn = document.getElementById('detail-save-btn');
+  saveBtn.textContent = saved.has(currentItem) ? '♥' : '♡';
+  saveBtn.className = 'detail-save-icon' + (saved.has(currentItem) ? ' saved' : '');
+  
+  updateSaved();
+}
+
+function updateSaved() {
+  const list = document.getElementById('saved-list');
+  const items = ITEMS.filter(item => saved.has(item.id));
+  
+  document.getElementById('saved-count').textContent = `${items.length} פריטים`;
+  
+  if (!items.length) {
+    list.innerHTML = `
+      <div class="saved-empty">
+        <div class="saved-empty-icon">♡</div>
+        עדיין לא שמרת פריטים.<br>
+        גלה יצירות בגלריה ושמור את האהובים עליך.
+      </div>
+    `;
+    return;
+  }
+  
+  list.innerHTML = `
+    <div class="saved-grid">
+      ${items.map(item => `
+        <div class="saved-card" onclick="openDetail(${item.id})">
+          <div class="saved-card-stage">${item.emoji}</div>
+          <div class="saved-card-info">
+            <button class="saved-card-rm" onclick="event.stopPropagation(); removeSaved(${item.id})">×</button>
+            <div class="saved-card-title">${item.title}</div>
+            <div class="saved-card-cat">${item.category}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function removeSaved(itemId) {
+  saved.delete(itemId);
+  updateSaved();
+  
+  // Update detail page if open
+  if (currentItem === itemId) {
+    const saveBtn = document.getElementById('detail-save-btn');
+    saveBtn.textContent = '♡';
+    saveBtn.className = 'detail-save-icon';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UPLOAD & CURATORIAL LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+let uploadedFiles = [];
+let uploadedImagePreview = null;
+
+function handleFileUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  uploadedFiles = [file];
+  uploadedImagePreview = URL.createObjectURL(file);
+
+  // Show preview inside the upload zone
+  const zone = document.getElementById('upload-zone');
+  zone.querySelectorAll('#uz-icon, #uz-text, #uz-sub').forEach(el => {
+    el.style.display = 'none';
+  });
+
+  // Remove existing preview if any
+  const existing = zone.querySelector('.upload-zone-preview');
+  if (existing) existing.remove();
+
+  const img = document.createElement('img');
+  img.className = 'upload-zone-preview';
+  img.src = uploadedImagePreview;
+  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:12px;opacity:0.85;';
+  zone.appendChild(img);
+
+  // Tap zone again to change image
+  zone.title = 'החלף תמונה';
+}
+
+// Processing Simulation
+function startProcessing() {
+  const overlay = document.getElementById('processing-overlay');
+  const title = document.getElementById('processing-title');
+  const stage = document.getElementById('processing-stage');
+  const fill = document.getElementById('processing-fill');
+  const percent = document.getElementById('processing-percent');
+  
+  overlay.classList.add('show');
+  
+  const stages = [
+    { text: 'Analyzing visual composition...', duration: 1200 },
+    { text: 'Detecting materials & textures...', duration: 1400 },
+    { text: 'Generating 3D mesh preview...', duration: 1600 },
+    { text: 'Consulting the Curator AI...', duration: 1800 },
+    { text: 'Crafting museum description...', duration: 1500 },
+    { text: 'Finalizing curatorial notes...', duration: 1000 }
+  ];
+  
+  let currentStage = 0;
+  let progress = 0;
+  
+  function nextStage() {
+    if (currentStage >= stages.length) {
+      // Processing complete - run curator logic
+      setTimeout(() => {
+        overlay.classList.remove('show');
+        runCuratorLogic();
+      }, 400);
+      return;
+    }
+    
+    const s = stages[currentStage];
+    stage.textContent = s.text;
+    
+    // Animate progress
+    const targetProgress = ((currentStage + 1) / stages.length) * 100;
+    const startProgress = progress;
+    const startTime = Date.now();
+    
+    function animateProgress() {
+      const elapsed = Date.now() - startTime;
+      const t = Math.min(elapsed / s.duration, 1);
+      
+      progress = startProgress + (targetProgress - startProgress) * t;
+      fill.style.width = `${progress}%`;
+      percent.textContent = `${Math.round(progress)}%`;
+      
+      if (t < 1) {
+        requestAnimationFrame(animateProgress);
+      } else {
+        currentStage++;
+        setTimeout(nextStage, 200);
+      }
+    }
+    
+    animateProgress();
+  }
+  
+  nextStage();
+}
+
+// Curator AI Logic - Returns APPROVED, PENDING, or REJECTED
+function runCuratorLogic() {
+  // Simulate AI decision
+  // In production, this would call your AI API
+  
+  const decision = simulateCuratorDecision();
+  
+  const preview = document.getElementById('curator-preview');
+  preview.classList.add('show');
+  
+  // Hide all results first
+  document.querySelectorAll('.curator-result').forEach(r => r.classList.remove('show'));
+  
+  if (decision === 'APPROVED') {
+    document.getElementById('curator-result-approved').classList.add('show');
+    
+    // Populate AI-generated content (placeholder)
+    const processed = generateCuratorialContent();
+    document.getElementById('ai-title').value = processed.title;
+    document.getElementById('ai-description').value = processed.description;
+    document.getElementById('creator-note').value = processed.creatorNote;
+    
+  } else if (decision === 'PENDING') {
+    document.getElementById('curator-result-pending').classList.add('show');
+    
+  } else if (decision === 'REJECTED') {
+    document.getElementById('curator-result-rejected').classList.add('show');
+  }
+  
+  // Scroll to preview
+  setTimeout(() => {
+    preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+// Simulate Curator Decision (placeholder for AI)
+function simulateCuratorDecision() {
+  // Currently set to always approve
+  // In production, this will analyze image/video with AI and return:
+  // - 'APPROVED' for valid handmade transformations
+  // - 'PENDING' for unique items requiring manual review
+  // - 'REJECTED' for commercial items without transformation
+  
+  return 'APPROVED'; // Always approve for now
+}
+
+// Generate Curatorial Content (placeholder for AI)
+function generateCuratorialContent() {
+  // This would be replaced with actual AI-generated content
+  
+  const titles = [
+    'מהפח לאוסף',
+    'תחיית החומר',
+    'סיפור של גילוי מחדש',
+    'מציאה אורבנית',
+    'טרנספורמציה במרחב'
+  ];
+  
+  const descriptions = [
+    'חפץ זה נמצא בפח פינוי ועבר תהליך שיקום מדויק. החלודה המקורית שומרה, והמבנה חוזק בקפידה כדי ליצור פריט פונקציונלי עם נשמה היסטורית.',
+    'פריט שנאסף מאתר בנייה נטוש והפך ליצירת עיצוב ייחודית. כל סימן שימוש נשמר כחלק מהסיפור, והעיבוד הידני מבטיח שאין שני פריטים זהים.',
+    'תהליך של המרה וחידוש הפך חומר גלם תעשייתי ליצירת אמנות שימושית. הפגמים הטבעיים הפכו לחלק מהשפה העיצובית.'
+  ];
+  
+  const creatorNotes = [
+    'מצאתי את הפריט ברחוב לאחר פינוי בניין ישן. תהליך השיפוץ כלל ניקוי עמוק, ריתוך חלקים שבורים, וציפוי מגן תוך שמירה על האופי המקורי.',
+    'הפריט נאסף מאתר בנייה. עיבדתי אותו בעבודת יד - ליטוש, צביעה, והרכבה מחודשת. השארתי את סימני השימוש המקוריים כדי לספר את הסיפור.',
+    'זהו פרויקט של חידוש ושימור. לקחתי משהו שנזרק והפכתי אותו ליצירה שימושית עם ערך אסתטי וסיפור.'
+  ];
+  
+  return {
+    title: titles[Math.floor(Math.random() * titles.length)],
+    description: descriptions[Math.floor(Math.random() * descriptions.length)],
+    creatorNote: creatorNotes[Math.floor(Math.random() * creatorNotes.length)]
+  };
+}
+
+// Curator Actions
+function cancelCurator() {
+  // Reset everything
+  document.getElementById('curator-preview').classList.remove('show');
+  document.getElementById('file-preview-grid').classList.remove('show');
+  
+  const zone = document.querySelector('.upload-zone');
+  zone.querySelectorAll('.uz-icon, .uz-text, .uz-sub').forEach(el => {
+    el.style.display = '';
+  });
+  
+  document.getElementById('file-input').value = '';
+  uploadedFiles = [];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOAST NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+function showToast(message, duration = 4000) {
+  const toast = document.getElementById('toast-notification');
+  const messageEl = document.getElementById('toast-message');
+  
+  messageEl.textContent = message;
+  toast.classList.add('show');
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, duration);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INTERIM ITEM - Add PNG preview while 3D processes
+// ═══════════════════════════════════════════════════════════════════════════
+
+function addInterimItem(itemData) {
+  // Add new item to ITEMS array with imagePreview
+  const newItem = {
+    id: ITEMS.length + 1,
+    emoji: itemData.emoji || '📦',
+    modelPath: null, // Will be updated when 3D is ready
+    imagePreview: itemData.imagePreview, // PNG frame from video
+    isProcessing: true, // Show "In Curation" badge
+    objectName: itemData.objectName,
+    category: itemData.category || 'עיצוב',
+    title: itemData.title,
+    description: itemData.description,
+    note: itemData.note,
+    material: itemData.material || 'לא צוין',
+    condition: itemData.condition || 'נוצר',
+    transformation: itemData.transformation || 'ממצא → יצירה',
+    location: itemData.location || 'ישראל',
+    creator: itemData.creator || 'אנונימי'
+  };
+  
+  ITEMS.unshift(newItem); // Add to beginning of array
+  
+  // Reinitialize gallery to show new item
+  const track = document.getElementById('gallery-track');
+  const dots = document.getElementById('gallery-dots');
+  track.innerHTML = '';
+  dots.innerHTML = '';
+  
+  initGallery();
+  
+  // Show toast notification
+  showToast('הוידאו נקלט. אנחנו מעבדים את ה-HD 3D, תקבל עדכון כשהפריט יעלה לבמה ✦');
+  
+  console.log('✓ Interim item added:', newItem);
+  
+  return newItem.id;
+}
+
+// Update item when 3D model is ready
+function updateItemWith3DModel(itemId, modelPath) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) {
+    console.error('Item not found:', itemId);
+    return;
+  }
+  
+  item.modelPath = modelPath;
+  item.imagePreview = null; // Remove PNG, show 3D
+  item.isProcessing = false; // Remove "In Curation" badge
+  
+  // Reload gallery card
+  reloadGalleryCard(itemId);
+  
+  // Show completion toast
+  showToast('המודל התלת-מימדי מוכן! הפריט עלה לבמה המוזיאלית ✦');
+  
+  console.log('✓ Item updated with 3D model:', itemId, modelPath);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEMO: Simulate backend 3D processing
+// ═══════════════════════════════════════════════════════════════════════════
+
+function simulateBackend3DProcessing(itemId, files) {
+  console.log(`📹 Simulating 3D processing for item ${itemId}...`);
+  console.log('Files:', files.map(f => f.name));
+  
+  // Simulate 20 seconds processing time (in production: 10-20 minutes)
+  setTimeout(() => {
+    console.log('✓ 3D model processing complete!');
+    
+    // Update item with 3D model path
+    // In production: this would be the actual .glb URL from Luma
+    updateItemWith3DModel(itemId, 'models/demo-babushka.glb');
+  }, 20000); // 20 seconds for demo
+}
+
+// ── Render Studio hold list ──
+function handleUploadSubmit() {
+  const name = document.getElementById('f-item-name').value.trim();
+  const desc = document.getElementById('f-item-desc').value.trim();
+
+  if (!name) {
+    document.getElementById('f-item-name').focus();
+    return;
+  }
+  if (!desc) {
+    document.getElementById('f-item-desc').focus();
+    return;
+  }
+
+  const now = new Date();
+  const dateStr = `${now.getDate().toString().padStart(2,'0')}.${(now.getMonth()+1).toString().padStart(2,'0')}.${now.getFullYear()}`;
+
+  // Add to USER_ITEMS only — NOT gallery
+  USER_ITEMS.unshift({
+    id: Date.now(),
+    title: name,
+    description: desc,
+    imagePreview: uploadedImagePreview || null,
+    emoji: '🎨',
+    status: 'pending',
+    submittedAt: dateStr
+  });
+
+  // Show success briefly
+  document.getElementById('upload-form').style.display = 'none';
+  document.getElementById('upload-success').classList.add('show');
+
+  // Reset and navigate to Studio after 1.8s
+  setTimeout(() => {
+    resetUploadForm();
+    document.getElementById('upload-form').style.display = 'block';
+    document.getElementById('upload-success').classList.remove('show');
+
+    showScreen('gallery');
+    setTimeout(() => {
+      renderStudio();
+      openStudioWorld();
+    }, 150);
+  }, 1800);
+}
+
+function resetUploadForm() {
+  // Clear fields
+  document.getElementById('f-item-name').value = '';
+  document.getElementById('f-item-desc').value = '';
+  document.getElementById('file-input').value = '';
+
+  // Reset upload zone
+  const zone = document.getElementById('upload-zone');
+  zone.querySelectorAll('#uz-icon, #uz-text, #uz-sub').forEach(el => {
+    el.style.display = '';
+  });
+  const preview = zone.querySelector('.upload-zone-preview');
+  if (preview) preview.remove();
+
+  uploadedFiles = [];
+  uploadedImagePreview = null;
+}
+
+function renderStudio() {
+  const list = document.getElementById('studio-hold-list');
+  if (!list) return;
+
+  const pending = USER_ITEMS.filter(i => i.status === 'pending');
+  const live = USER_ITEMS.filter(i => i.status === 'live');
+
+  // Update counters
+  document.getElementById('studio-count-pending').textContent = pending.length;
+  document.getElementById('studio-count-live').textContent = live.length;
+  document.getElementById('studio-count-total').textContent = USER_ITEMS.length;
+
+  if (USER_ITEMS.length === 0) {
+    list.innerHTML = `
+      <div class="studio-empty">
+        <div class="studio-empty-icon">⬡</div>
+        הפריטים שתעלה יופיעו כאן<br>עד שיאושרו לגלריה ✦
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+
+  if (pending.length > 0) {
+    html += `<div class="studio-section-label">ממתינים לאישור</div>`;
+    html += pending.map(item => `
+      <div class="studio-hold-card">
+        ${item.imagePreview
+          ? `<img class="studio-hold-thumb" src="${item.imagePreview}" alt="${item.title}">`
+          : `<div class="studio-hold-thumb-emoji">${item.emoji || '📦'}</div>`
+        }
+        <div class="studio-hold-info">
+          <div class="studio-hold-title">${item.title}</div>
+          <div class="studio-hold-status">
+            <div class="studio-hold-dot"></div>
+            בבדיקת אוצר... ✦
+          </div>
+          <div class="studio-hold-date">${item.submittedAt}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  if (live.length > 0) {
+    html += `<div class="studio-section-label" style="margin-top:16px;">פעיל בגלריה</div>`;
+    html += live.map(item => `
+      <div class="studio-hold-card" style="opacity:0.7;">
+        ${item.imagePreview
+          ? `<img class="studio-hold-thumb" src="${item.imagePreview}" alt="${item.title}">`
+          : `<div class="studio-hold-thumb-emoji">${item.emoji || '📦'}</div>`
+        }
+        <div class="studio-hold-info">
+          <div class="studio-hold-title">${item.title}</div>
+          <div class="studio-hold-status" style="background:rgba(76,175,80,0.1); border-color:rgba(76,175,80,0.2); color:rgba(100,200,100,0.85);">
+            <div class="studio-hold-dot" style="background:#4CAF50;"></div>
+            בגלריה
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  list.innerHTML = html;
+}
+
+function publishItem() {
+  const title = document.getElementById('ai-title').value.trim();
+  const description = document.getElementById('ai-description').value.trim();
+  const note = document.getElementById('creator-note').value.trim();
+
+  if (!title || !description) {
+    alert('אנא מלא את כל השדות הנדרשים');
+    return;
+  }
+
+  // Extract preview image
+  const hasVideo = uploadedFiles.some(f => f.type.startsWith('video/'));
+  let imagePreview = null;
+
+  if (hasVideo) {
+    const imageFile = uploadedFiles.find(f => f.type.startsWith('image/'));
+    if (imageFile) imagePreview = URL.createObjectURL(imageFile);
+  } else {
+    const imageFile = uploadedFiles[0];
+    if (imageFile && imageFile.type.startsWith('image/')) {
+      imagePreview = URL.createObjectURL(imageFile);
+    }
+  }
+
+  // Add to USER_ITEMS only — NOT to the main gallery ITEMS
+  const now = new Date();
+  const dateStr = `${now.getDate().toString().padStart(2,'0')}.${(now.getMonth()+1).toString().padStart(2,'0')}.${now.getFullYear()}`;
+
+  USER_ITEMS.unshift({
+    id: Date.now(),
+    title,
+    description,
+    note,
+    imagePreview,
+    emoji: '🎨',
+    status: 'pending', // 'pending' | 'live'
+    submittedAt: dateStr
+  });
+
+  // Show brief success state
+  document.getElementById('upload-form').style.display = 'none';
+  document.getElementById('upload-success').classList.add('show');
+
+  // After short delay: reset form, go to Studio
+  setTimeout(() => {
+    document.getElementById('upload-form').style.display = 'block';
+    document.getElementById('upload-success').classList.remove('show');
+
+    // Clear form fields
+    document.getElementById('ai-title').value = '';
+    document.getElementById('ai-description').value = '';
+    document.getElementById('creator-note').value = '';
+    cancelCurator();
+
+    // Navigate: back to gallery screen, then open Studio world
+    showScreen('gallery');
+    setTimeout(() => {
+      renderStudio();
+      openStudioWorld();
+    }, 150);
+
+  }, 2000);
+}
+
+function submitPending() {
+  console.log('Submitting for curator review:', {
+    files: uploadedFiles.map(f => f.name)
+  });
+  
+  alert('📬 נשלח לבדיקה\n\nהפריט שלך נשלח לצוות האוצרים לבדיקה.\nנעדכן אותך בהקדם האפשרי.');
+  
+  cancelCurator();
+  
+  // TODO: Save to pending queue in backend
+}
+
+function tryAgain() {
+  cancelCurator();
+}
+
+// Report Item (from Detail Page)
+function reportItem() {
+  if (!currentItem) return;
+  
+  const item = ITEMS.find(i => i.id === currentItem);
+  if (!item) return;
+  
+  const confirmed = confirm(
+    `דיווח על פריט מסחרי\n\n` +
+    `האם אתה בטוח שהפריט "${item.title}" הוא פריט מסחרי שלא עבר טרנספורמציה ידנית?\n\n` +
+    `דיווחים מסייעים לשמור על איכות הפלטפורמה.`
+  );
+  
+  if (confirmed) {
+    console.log('Reported item:', item.id);
+    
+    alert('תודה על הדיווח!\n\nהפריט יועבר לבדיקת צוות האוצרים.');
+    
+    // TODO: Send report to backend
+    // await reportItemToBackend(item.id);
+  }
+}
+
+// Commercial detection logic (enhanced)
+function detectCommercialItem(objectName, story, details) {
+  const commercialKeywords = [
+    'איקאה', 'ikea', 'זארה', 'zara', 'h&m',
+    'ריהיטוני', 'ניטורי', 'המושבה', 'גולברי'
+  ];
+  
+  const text = `${objectName} ${story} ${details}`.toLowerCase();
+  
+  for (const keyword of commercialKeywords) {
+    if (text.includes(keyword.toLowerCase())) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Curatorial text processor (skeleton - will be enhanced with AI)
+function processCuratorialText(objectName, story, details) {
+  // This is a placeholder for future AI integration
+  // For now, returns formatted versions of user input
+  
+  return {
+    title: objectName, // Will be enhanced
+    description: story, // Will be enhanced
+    note: `פריט זה מייצג את התהליך היצירתי של שינוי והמרה. ${story.substring(0, 100)}...`, // Will be enhanced
+    category: extractCategory(objectName, story),
+    transformation: extractTransformation(story)
+  };
+}
+
+function extractCategory(objectName, story) {
+  const categories = {
+    'כיסא': 'ריהוט',
+    'שולחן': 'ריהוט',
+    'מדף': 'ריהוט',
+    'מנורה': 'תאורה',
+    'תאורה': 'תאורה',
+    'אגרטל': 'עיצוב',
+    'מראה': 'עיצוב',
+    'כוס': 'כלי בית',
+    'צלחת': 'כלי בית'
+  };
+  
+  const text = `${objectName} ${story}`.toLowerCase();
+  
+  for (const [keyword, category] of Object.entries(categories)) {
+    if (text.includes(keyword)) {
+      return category;
+    }
+  }
+  
+  return 'עיצוב';
+}
+
+function extractTransformation(story) {
+  // Simple extraction - will be enhanced
+  const transformations = [
+    'פח → עיצוב',
+    'ביוב → תאורה',
+    'פסולת → יצירה',
+    'ים → בית',
+    'בנייה → בית',
+    'שבור → נגינה'
+  ];
+  
+  return transformations[Math.floor(Math.random() * transformations.length)];
+}
+
+function submitItem() {
+  const objectName = document.getElementById('f-object-name').value.trim();
+  const story = document.getElementById('f-story').value.trim();
+  const details = document.getElementById('f-details').value.trim();
+  
+  // Validation
+  if (!objectName || !story) {
+    alert('אנא מלא את שם החפץ והסיפור');
+    return;
+  }
+  
+  // Commercial detection
+  if (detectCommercialItem(objectName, story, details)) {
+    const warning = document.getElementById('validation-warning');
+    warning.classList.add('show');
+    
+    setTimeout(() => {
+      warning.classList.remove('show');
+    }, 5000);
+    
+    return;
+  }
+  
+  // Process with curatorial logic
+  const processed = processCuratorialText(objectName, story, details);
+  
+  console.log('Processed item:', processed);
+  
+  // Show success
+  document.getElementById('upload-form').style.display = 'none';
+  document.getElementById('upload-success').classList.add('show');
+  
+  // Reset after delay
+  setTimeout(() => {
+    document.getElementById('upload-form').style.display = 'block';
+    document.getElementById('upload-success').classList.remove('show');
+    
+    // Clear form
+    document.getElementById('f-object-name').value = '';
+    document.getElementById('f-story').value = '';
+    document.getElementById('f-details').value = '';
+    
+    // Reset upload zone
+    const zone = document.querySelector('.upload-zone');
+    zone.querySelectorAll('.uz-icon, .uz-text, .uz-sub').forEach(el => {
+      el.style.display = '';
+    });
+    const preview = zone.querySelector('.upload-preview');
+    if (preview) preview.remove();
+    
+  }, 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FULLSCREEN MODE
+// ═══════════════════════════════════════════════════════════════════════════
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    // Enter fullscreen
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { /* Safari */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE11 */
+      elem.msRequestFullscreen();
+    }
+  } else {
+    // Exit fullscreen
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) { /* Safari */
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) { /* IE11 */
+      document.msExitFullscreen();
+    }
+  }
+}
+
+// Update button icon when fullscreen changes
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.querySelector('.fullscreen-btn');
+  if (btn) {
+    btn.textContent = document.fullscreenElement ? '◱' : '⛶';
+    btn.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen Mode';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (Navigation Guard moved to end of script, after WorldState declaration)
+
+function showScreen(name) {
+  closeDetail();
+  if (_seamlessActiveCard) closeDetailSeamless();
+
+  // Close any open world (UI only — popstate owns history)
+  if (typeof currentWorld !== 'undefined' && currentWorld !== 'gallery') {
+    document.getElementById('studio-world').classList.remove('active');
+    document.getElementById('map-world').classList.remove('active');
+    currentWorld = 'gallery';
+  }
+
+  const galleryScreen = document.getElementById('gallery-screen');
+  if (galleryScreen) {
+    galleryScreen.style.visibility = (name === 'gallery') ? 'visible' : 'hidden';
+  }
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  document.getElementById(`${name}-screen`).classList.add('active');
+  document.getElementById(`nav-${name}`).classList.add('active');
+
+  if (name === 'saved') updateSaved();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeDetail();
+  }
+  
+  if (document.getElementById('detail-page').classList.contains('open')) {
+    if (e.key === '+' || e.key === '=') {
+      zoomIn();
+    }
+    if (e.key === '-' || e.key === '_') {
+      zoomOut();
+    }
+    if (e.key === '0') {
+      resetZoom();
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.addEventListener('load', async () => {
+  const overlay = document.getElementById('loading-overlay');
+
+  // Warn if running from file:// — fetch won't work
+  if (window.location.protocol === 'file:') {
+    console.warn('⚠ Running from file:// — network requests are blocked by browser security.');
+    console.warn('👉 Run from localhost: python3 -m http.server 8080');
+    // Show tip in overlay
+    const spinner = overlay.querySelector('.loading-spinner');
+    if (spinner) {
+      const tip = document.createElement('div');
+      tip.style.cssText = 'margin-top:16px;font-size:11px;color:#8A8780;text-align:center;padding:0 20px;line-height:1.6;';
+      tip.innerHTML = 'לטעינת נתונים עדכניים, פתח מ-localhost:<br><code style="font-size:10px">python3 -m http.server 8080</code>';
+      spinner.parentNode.appendChild(tip);
+    }
+  }
+
+  await loadItemsFromSheet();
+  initGallery();
+  setTimeout(() => { overlay.classList.add('hide'); }, 400);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE WORLDS NAVIGATION SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Core routing ──
+// Studio world is UP (top) → opened by swiping DOWN from gallery
+// Map world is DOWN (bottom) → opened by swiping UP from gallery
+// Stats opened by swiping UP inside detail page
+// Close by swiping in the OPPOSITE direction
+const WorldState = {
+  STUDIO: 'studio',
+  GALLERY: 'gallery',
+  MAP: 'map'
+};
+
+let currentWorld = WorldState.GALLERY;
+let worldsLocked = false;
+
+// Thresholds
+const SWIPE_THRESHOLD = 55;
+const WHEEL_THRESHOLD = 80;
+const ORBIT_SAFE_ZONE = 40;
+
+// Touch tracking
+let wTouchStartY = 0;
+let wTouchStartX = 0;
+let wTouchStartTime = 0;
+let wIsDraggingWorld = false;
+
+function openStudioWorld() {
+  if (worldsLocked || currentWorld === WorldState.STUDIO) return;
+  worldsLocked = true;
+  currentWorld = WorldState.STUDIO;
+  document.getElementById('studio-world').classList.add('active');
+  document.getElementById('map-world').classList.remove('active');
+  renderStudio();
+  history.pushState({ gm: 'active' }, '');
+  setTimeout(() => { worldsLocked = false; }, 600);
+}
+
+function openMapWorld() {
+  if (worldsLocked || currentWorld === WorldState.MAP) return;
+  worldsLocked = true;
+  currentWorld = WorldState.MAP;
+  document.getElementById('map-world').classList.add('active');
+  document.getElementById('studio-world').classList.remove('active');
+  history.pushState({ gm: 'active' }, '');
+  setTimeout(() => { worldsLocked = false; }, 600);
+}
+
+function closeWorld() {
+  if (worldsLocked || currentWorld === WorldState.GALLERY) return;
+  worldsLocked = true;
+  currentWorld = WorldState.GALLERY;
+  document.getElementById('studio-world').classList.remove('active');
+  document.getElementById('map-world').classList.remove('active');
+  // If closed by swipe (not back button), sync history
+
+  setTimeout(() => { worldsLocked = false; }, 600);
+}
+// ── Detail Stats Overlay ──
+function openDetailStats() {
+  if (detailStatsLocked || detailStatsOpen) return;
+  detailStatsLocked = true;
+  detailStatsOpen = true;
+  document.getElementById('detail-stats-overlay').classList.add('open');
+  updateDetailStats();
+
+  setTimeout(() => { detailStatsLocked = false; }, 600);
+}
+
+function closeDetailStats() {
+  if (detailStatsLocked || !detailStatsOpen) return;
+  detailStatsLocked = true;
+  detailStatsOpen = false;
+  document.getElementById('detail-stats-overlay').classList.remove('open');
+
+  setTimeout(() => { detailStatsLocked = false; }, 600);
+}
+
+function updateDetailStats() {
+  const item = ITEMS.find(i => i.id === currentItem) || ITEMS[0];
+  if (!item) return;
+
+  const gs = item.gravityScore || (item.gravityScore = Math.floor(Math.random() * 80) + 10);
+  const views = item.viewsCount || (item.viewsCount = Math.floor(Math.random() * 300) + 20);
+  const saves = item.savesCount || (item.savesCount = Math.floor(Math.random() * 40) + 2);
+  const longViews = item.longViewsCount || (item.longViewsCount = Math.floor(Math.random() * 80) + 5);
+  const decayDays = item.decayDays || (item.decayDays = Math.floor(Math.random() * 14) + 3);
+
+  document.getElementById('dso-title').textContent = item.title;
+  document.getElementById('dso-aura-val').textContent = gs;
+  document.getElementById('dso-aura-sub').textContent = `Gravity Score · ${item.category}`;
+  setTimeout(() => {
+    document.getElementById('dso-aura-fill').style.width = `${Math.min(100, (gs / 90) * 100)}%`;
+  }, 200);
+
+  const dashOffset = 175 - (175 * (decayDays / 21));
+  document.getElementById('dso-decay-val').textContent = decayDays;
+  document.getElementById('dso-decay-sub').textContent = decayDays > 10 ? 'מצב יציב' : decayDays > 5 ? 'דועך לאט' : '⚠ דעיכה מהירה';
+  setTimeout(() => {
+    document.getElementById('dso-decay-circle').style.strokeDashoffset = dashOffset;
+  }, 300);
+
+  document.getElementById('dso-views').textContent = views;
+  document.getElementById('dso-saves').textContent = saves;
+  document.getElementById('dso-long').textContent = longViews;
+
+  const levelIndex = gs < 10 ? 0 : gs < 30 ? 1 : gs < 60 ? 2 : gs < 90 ? 3 : 4;
+  document.querySelectorAll('.dso-gs-fill').forEach((el, i) => {
+    el.classList.toggle('active', i === levelIndex);
+  });
+}
+
+// ── Wheel (Desktop) — Gallery worlds only ──
+let wheelAccum = 0;
+let wheelTimer;
+
+document.getElementById('app-container').addEventListener('wheel', (e) => {
+  const galleryActive = document.getElementById('gallery-screen').classList.contains('active');
+  if (!galleryActive) return;
+  if (document.getElementById('detail-page').classList.contains('open')) return;
+
+  if (currentWorld !== WorldState.GALLERY) {
+    const scrollEl = currentWorld === WorldState.STUDIO
+      ? document.getElementById('sw-body')
+      : document.querySelector('.mw-city-list');
+
+    if (scrollEl) {
+      const atTop = scrollEl.scrollTop === 0;
+      const atBottom = scrollEl.scrollTop >= scrollEl.scrollHeight - scrollEl.clientHeight - 2;
+
+      // Studio (top): scroll DOWN (deltaY > 0) to dismiss back down
+      // Map (bottom):  scroll UP  (deltaY < 0) to dismiss back up
+      if ((currentWorld === WorldState.STUDIO && atTop && e.deltaY > 0) ||
+          (currentWorld === WorldState.MAP && atBottom && e.deltaY < 0)) {
+        // Fall through — trigger close
+      } else {
+        return;
+      }
+    }
+  }
+
+  wheelAccum += e.deltaY;
+  clearTimeout(wheelTimer);
+  wheelTimer = setTimeout(() => { wheelAccum = 0; }, 300);
+
+  if (Math.abs(wheelAccum) >= WHEEL_THRESHOLD) {
+    const dir = wheelAccum > 0 ? 'down' : 'up';
+    wheelAccum = 0;
+    handleWorldSwipeIntent(dir);
+  }
+}, { passive: true });
+
+// ── Touch Events — Gallery worlds ──
+document.getElementById('app-container').addEventListener('touchstart', (e) => {
+  if (document.getElementById('detail-page').classList.contains('open')) return;
+  if (_seamlessActiveCard) return; // OrbitControls owns touch in detail mode
+  const galleryActive = document.getElementById('gallery-screen').classList.contains('active');
+  if (!galleryActive) return;
+
+  wTouchStartY = e.touches[0].clientY;
+  wTouchStartX = e.touches[0].clientX;
+  wTouchStartTime = Date.now();
+  wIsDraggingWorld = false;
+}, { passive: true });
+
+document.getElementById('app-container').addEventListener('touchmove', (e) => {
+  if (document.getElementById('detail-page').classList.contains('open')) return;
+  if (_seamlessActiveCard) return; // OrbitControls owns touch in detail mode
+  const galleryActive = document.getElementById('gallery-screen').classList.contains('active');
+  if (!galleryActive) return;
+
+  const dy = e.touches[0].clientY - wTouchStartY;
+  const dx = e.touches[0].clientX - wTouchStartX;
+
+  if (Math.abs(dx) > Math.abs(dy) * 1.5 && !wIsDraggingWorld) return;
+
+  if (currentWorld !== WorldState.GALLERY) {
+    const scrollEl = currentWorld === WorldState.STUDIO
+      ? document.getElementById('sw-body')
+      : document.querySelector('.mw-city-list');
+
+    if (scrollEl) {
+      const atTop = scrollEl.scrollTop <= 0;
+      const atBottom = scrollEl.scrollTop >= scrollEl.scrollHeight - scrollEl.clientHeight - 2;
+
+      const isCloseGesture =
+        (currentWorld === WorldState.STUDIO && dy > 0 && atTop) ||
+        (currentWorld === WorldState.MAP    && dy < 0 && atBottom);
+
+      if (!isCloseGesture) return;
+    }
+  } else {
+    const container = document.getElementById('app-container');
+    const rect = container.getBoundingClientRect();
+    const touchX = e.touches[0].clientX - rect.left;
+    const touchY = e.touches[0].clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height * 0.3;
+
+    const isInOrbitZone = (
+      Math.abs(touchX - centerX) < ORBIT_SAFE_ZONE * 2 &&
+      Math.abs(touchY - centerY) < ORBIT_SAFE_ZONE * 2
+    );
+    if (isInOrbitZone && Math.abs(dy) < 30 && !wIsDraggingWorld) return;
+  }
+
+  if (Math.abs(dy) > 12) wIsDraggingWorld = true;
+}, { passive: true });
+
+document.getElementById('app-container').addEventListener('touchend', (e) => {
+  if (document.getElementById('detail-page').classList.contains('open')) return;
+  if (_seamlessActiveCard) return; // OrbitControls owns touch in detail mode
+  const galleryActive = document.getElementById('gallery-screen').classList.contains('active');
+  if (!galleryActive) return;
+
+  const dy = e.changedTouches[0].clientY - wTouchStartY;
+  const dt = Date.now() - wTouchStartTime;
+  const velocity = Math.abs(dy) / dt;
+
+  const isSwipe = Math.abs(dy) > SWIPE_THRESHOLD || velocity > 0.35;
+
+  if (isSwipe) {
+    const dir = dy > 0 ? 'down' : 'up';
+    handleWorldSwipeIntent(dir);
+  }
+  wIsDraggingWorld = false;
+}, { passive: true });
+
+// ── Touch Events — Detail page stats ──
+let dTouchStartY = 0;
+let dIsDragging = false;
+
+document.getElementById('detail-page').addEventListener('touchstart', (e) => {
+  dTouchStartY = e.touches[0].clientY;
+  dIsDragging = false;
+}, { passive: true });
+
+document.getElementById('detail-page').addEventListener('touchmove', (e) => {
+  const dy = e.touches[0].clientY - dTouchStartY;
+  if (Math.abs(dy) > 10) dIsDragging = true;
+}, { passive: true });
+
+document.getElementById('detail-page').addEventListener('touchend', (e) => {
+  if (!dIsDragging) return;
+  const dy = e.changedTouches[0].clientY - dTouchStartY;
+  const dt = Date.now(); // just needs magnitude
+  const isSwipe = Math.abs(dy) > SWIPE_THRESHOLD;
+
+  if (isSwipe) {
+    if (dy < 0 && !detailStatsOpen) {
+      // Swipe up → open stats
+      openDetailStats();
+    } else if (dy > 0 && detailStatsOpen) {
+      // Swipe down → close stats
+      closeDetailStats();
+    }
+  }
+  dIsDragging = false;
+}, { passive: true });
+
+// ── Core gallery routing ──
+function handleWorldSwipeIntent(direction) {
+  if (worldsLocked) return;
+
+  if (currentWorld === WorldState.GALLERY) {
+    if (direction === 'down') openStudioWorld(); // Studio slides in from top
+    else if (direction === 'up') openMapWorld(); // Map slides up from bottom
+  } else if (currentWorld === WorldState.STUDIO) {
+    if (direction === 'up') closeWorld();   // Push up → Studio retreats to top
+  } else if (currentWorld === WorldState.MAP) {
+    if (direction === 'down') closeWorld(); // Push down → Map retreats to bottom
+  }
+}
+
+// ── Studio tab switcher ──
+function switchStudioTab(tab) {
+  document.querySelectorAll('.studio-tab').forEach((el, i) => {
+    const tabs = ['items','collections','activity'];
+    el.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.studio-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById(`studio-panel-${tab}`);
+  if (panel) panel.classList.add('active');
+}
+
+function editStudioProfile() {
+  const name = prompt('שם:', document.getElementById('studio-user-name').textContent);
+  if (name) document.getElementById('studio-user-name').textContent = name;
+}
+
+// ── Public Profile ──
+
+// Creator data lookup (falls back to gallery items)
+function getCreatorData(creatorName) {
+  const items = ITEMS.filter(i =>
+    (i.creatorName || i.creator) === creatorName
+  );
+
+  // Check if this is "me" (current user)
+  const myName = document.getElementById('studio-user-name')?.textContent;
+  const isMe = creatorName === myName;
+
+  return {
+    name: creatorName,
+    isMe,
+    bio: items[0]?.bio || 'אוצר ויוצר עצמאי. מחפש יופי בחפצים שנשכחו.',
+    influence: Math.floor(Math.random() * 150) + 30,
+    items
+  };
+}
+
+function openPublicProfile(creatorName) {
+  const data = getCreatorData(creatorName);
+
+  // If tapping own name → open Studio instead
+  if (data.isMe) {
+    openStudioWorld();
+    return;
+  }
+
+  const body = document.getElementById('pp-body');
+  body.innerHTML = `
+    <div class="pp-hero">
+      <div class="pp-avatar">${creatorName.charAt(0)}</div>
+      <div class="pp-name">${creatorName}</div>
+      <div class="pp-bio">${data.bio}</div>
+      <div class="pp-influence">
+        <div class="pp-influence-score">${data.influence}</div>
+        <div class="pp-influence-label">Influence Score</div>
+      </div>
+    </div>
+
+    ${data.items.length > 0 ? `
+      <div class="pp-section-label">יצירות</div>
+      <div class="pp-grid">
+        ${data.items.map(item => `
+          <div class="pp-grid-item" onclick="openDetail(${item.id}); closePublicProfile();">
+            <div class="pp-grid-emoji">${item.emoji}</div>
+            <div class="pp-grid-title">${item.title}</div>
+            <div class="pp-grid-cat">${item.category}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : `
+      <div class="pp-section-label" style="padding-top:40px; text-align:center; color:var(--muted); font-size:12px;">
+        אין פריטים עדיין בגלריה
+      </div>
+    `}
+  `;
+
+  document.getElementById('public-profile-page').classList.add('open');
+  history.pushState({ gm: 'active' }, '');
+}
+
+function closePublicProfile() {
+  document.getElementById('public-profile-page').classList.remove('open');
+}
+
+// ── City selection ──
+function selectCity(cityId) {
+  showToast(`גלריית ${cityId === 'tel-aviv' ? 'תל אביב' : cityId === 'haifa' ? 'חיפה' : 'ירושלים'} — בקרוב ✦`);
+}
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  if (document.getElementById('detail-page').classList.contains('open')) {
+    const canvas = document.getElementById('particles-canvas');
+    const stage = document.getElementById('detail-stage');
+    canvas.width = stage.offsetWidth;
+    canvas.height = stage.offsetHeight;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HISTORY / BACK BUTTON — NAVIGATION GUARD
+// Placed here so WorldState + currentWorld are guaranteed to be defined.
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Two pushStates on load = double cushion.
+// popstate = close deepest layer + refill cushion.
+// Close functions are UI-only. This listener owns all history logic.
+//
+// Push double cushion immediately — script runs after DOM is ready
+history.pushState({ gm: 'base' }, '');   // cushion 1
+history.pushState({ gm: 'active' }, ''); // cushion 2
+
+window.addEventListener('popstate', () => {
+  // 1. Detail stats
+  if (detailStatsOpen) {
+    closeDetailStats();
+    history.pushState({ gm: 'active' }, '');
+    return;
+  }
+
+  // 2. Seamless detail (gallery card in detail mode)
+  if (_seamlessActiveCard) {
+    closeDetailSeamless();
+    history.pushState({ gm: 'active' }, '');
+    return;
+  }
+
+  // 3. Public profile
+  if (document.getElementById('public-profile-page').classList.contains('open')) {
+    closePublicProfile();
+    history.pushState({ gm: 'active' }, '');
+    return;
+  }
+
+  // 3. World open (studio / map)
+  if (currentWorld !== WorldState.GALLERY) {
+    closeWorld();
+    history.pushState({ gm: 'active' }, '');
+    return;
+  }
+
+  // 3. Detail page
+  if (document.getElementById('detail-page').classList.contains('open')) {
+    closeDetail();
+    history.pushState({ gm: 'active' }, '');
+    return;
+  }
+
+  // 4. Non-gallery screen
+  const active = document.querySelector('.screen.active');
+  if (active && active.id !== 'gallery-screen') {
+    showScreen('gallery');
+    history.pushState({ gm: 'active' }, '');
+    return;
+  }
+
+  // 5. Gallery, nothing open → exit naturally. No pushState.
+});
+</script>
+</body>
+</html>
